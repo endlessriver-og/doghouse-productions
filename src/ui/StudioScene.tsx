@@ -41,6 +41,10 @@ const dots = (p: Pal) => p.dots
   : "";
 
 // --- cozy cast (same ink-outline + cel-shade language as the scene) ---
+// RULE: anonymous studio characters ONLY. Deliberately NOT the real Omni team —
+// never name them, never map a figure to a roster member. They're generic
+// scene-goers (a photographer, a model, an operator, a member). If this ever goes
+// dynamic, scale by COUNT/activity, keep them nameless.
 interface Figure { skin: string; skinS: string; hair: string; outfit: string; outfitS: string; pose: "stand" | "sit" | "shoot"; work?: boolean }
 function person(x: number, y: number, s: number, o: Figure): string {
   const { skin, skinS, hair, outfit, outfitS, pose, work } = o;
