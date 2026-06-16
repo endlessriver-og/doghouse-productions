@@ -7,6 +7,7 @@ import { EventModal } from "./ui/EventModal";
 import { NewProjectModal } from "./ui/NewProjectModal";
 import { PrestigeModal } from "./ui/PrestigeModal";
 import { ScoreReveal } from "./ui/ScoreReveal";
+import { StartScreen } from "./ui/StartScreen";
 import { StoryModal } from "./ui/StoryModal";
 import { UpgradesPanel } from "./ui/UpgradesPanel";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
@@ -44,7 +45,8 @@ export function App() {
     return () => clearTimeout(t);
   }, [s.narrator]);
 
-  const modal = s.gameOver ? "over"
+  const modal = !s.scenarioChosen ? "start"
+    : s.gameOver ? "over"
     : s.lastRelease ? "release"
     : s.awardsPending ? "awards"
     : s.storyQueue.length ? "story"
@@ -92,12 +94,14 @@ export function App() {
         <div className="col-side">
           <UpgradesPanel />
           {s.catalog.length > 0 && <CatalogPanel />}
+          {s.regulars.length > 0 && <RegularsPanel />}
           <RivalsPanel />
           <RecruitPanel />
           <LogPanel />
         </div>
       </main>
 
+      {modal === "start" && <StartScreen />}
       {modal === "new" && <NewProjectModal onClose={() => setShowNew(false)} />}
       {modal === "story" && <StoryModal />}
       {modal === "event" && <EventModal />}
@@ -138,6 +142,7 @@ function IdleView({ onNew, canPrestige, onPrestige }: { onNew: () => void; canPr
           <Button variant="ghost" onClick={advanceWeek} title="Pass a week">Skip Week ▸</Button>
           {canPrestige && <Button variant="ghost" onClick={onPrestige} title="Reset for a permanent bonus">↻ Legacy Reset</Button>}
         </div>
+        <OnboardingHint />
         <div className="idle-stats"><span className="muted">{totalReleases} shipped · {legendary.length} legendary</span></div>
         {legendary.length > 0 && (
           <div className="legend-wall">
@@ -147,6 +152,24 @@ function IdleView({ onNew, canPrestige, onPrestige }: { onNew: () => void; canPr
         )}
       </div>
     </Panel>
+  );
+}
+
+// ---------------- Onboarding ----------------
+function OnboardingHint() {
+  const s = useGame();
+  if (s.legacyRun > 0) return null;
+  const steps = [
+    { label: "Throw your first event (members fund rent)", done: s.totalReleases >= 1 },
+    { label: "Build a studio space", done: s.ownedUpgrades.length >= 1 },
+    { label: "Cover rent with memberships", done: s.members * 35 >= s.burn },
+  ];
+  if (steps.every((x) => x.done)) return null;
+  return (
+    <div className="onboard">
+      <div className="field-label" style={{ margin: 0 }}>Getting started</div>
+      {steps.map((x, i) => <div key={i} className={`onboard-step ${x.done ? "step-done" : ""}`}>{x.done ? "✓" : "○"} {x.label}</div>)}
+    </div>
   );
 }
 
@@ -236,6 +259,23 @@ function CatalogPanel() {
   );
 }
 
+// ---------------- Regulars ----------------
+function RegularsPanel() {
+  const regulars = useGame((s) => s.regulars);
+  return (
+    <Panel title="Regulars">
+      <div className="rivals">
+        {regulars.map((r, i) => (
+          <div key={i} className="cat-row" style={{ borderLeftColor: "var(--accent)" }}>
+            <span className="cat-title">{r.name}</span>
+            <span className="muted">loves {vibeById(r.favVibe).name}</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 // ---------------- Rivals ----------------
 function RivalsPanel() {
   const rivals = useGame((s) => s.rivals);
@@ -257,16 +297,20 @@ function RivalsPanel() {
 function StaffPanel() {
   const staff = useGame((s) => s.staff);
   const cash = useGame((s) => s.cash);
+  const bonds = useGame((s) => s.bonds);
   const train = useGame((s) => s.train);
   return (
     <Panel title="Crew">
       <div className="crew-grid">
         {staff.map((c) => {
           const cost = trainCost(c);
+          const bond = bonds.find((b) => b.a === c.id || b.b === c.id);
+          const partner = bond ? staff.find((x) => x.id === (bond.a === c.id ? bond.b : bond.a)) : null;
           return (
             <div key={c.id} className={`creative-card ${c.assigned ? "card-busy" : ""}`}>
               <div className="cc-head"><span className="cc-name">{c.name}</span><span className="cc-role">{roleName(c.role)} · Lv{c.level}</span></div>
               <TraitChip trait={c.trait} />
+              {bond && partner && <span className={`bond-chip bond-${bond.kind}`}>{bond.kind === "chemistry" ? "♥" : "⚡"} {partner.name.split(" ")[0]}</span>}
               <div className="cc-stats">
                 <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} />
               </div>

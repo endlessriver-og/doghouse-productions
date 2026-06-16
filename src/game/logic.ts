@@ -3,12 +3,13 @@
 
 import {
   AWARD_CATEGORIES, CRITICS, DEFAULT_PHASES, FOCUS, GOAL_TEMPLATES, LEGACY_TRAITS,
-  MEDIUMS, RIVAL_NAMES, ROLES, SEASONS, TRAITS, UPGRADES, eraForYear, mediumById,
-  narratorLine, rollRecruit, scenarioById, seasonForMonth, startingCrew, synergyMult,
+  MEDIUMS, RIVAL_NAMES, ROLES, SEASONS, TRAITS, UPGRADES, eraForYear, makeBond,
+  makeRegular, mediumById, narratorLine, rollRecruit, scenarioById, seasonForMonth,
+  startingCrew, synergyMult,
 } from "./data";
 import type {
-  AwardResult, Axis, AxisPoints, CatalogItem, Creative, Focus, GameState, Goal,
-  LogEntry, Medium, Phases, Project, ReleaseResult, Rival, Trend,
+  AwardResult, Axis, AxisPoints, Bond, CatalogItem, Creative, Focus, GameState, Goal,
+  LogEntry, Medium, Phases, Project, Regular, ReleaseResult, Rival, Trend,
 } from "./types";
 
 // ---- Tunable constants ----
@@ -46,6 +47,14 @@ export function venueCapOf(s: GameState): number {
   return BASE_VENUE_CAP + UPGRADES.filter((u) => s.ownedUpgrades.includes(u.id))
     .reduce((sum, u) => sum + (u.venueCap ?? 0), 0);
 }
+/** Owning complementary spaces gives a small payoff bump (layout adjacency). */
+const ADJACENCIES: [string, string][] = [["recording", "lounge"], ["photo", "sets"], ["venue", "lounge"], ["workshop", "sets"]];
+export function adjacencyMult(owned: string[]): number {
+  let m = 1;
+  for (const [a, b] of ADJACENCIES) if (owned.includes(a) && owned.includes(b)) m += 0.05;
+  return m;
+}
+
 export function axisBoostsOf(s: GameState): Partial<AxisPoints> {
   const out: Partial<AxisPoints> = {};
   for (const u of UPGRADES) {
@@ -87,17 +96,19 @@ export function phaseMatch(p: Phases, ideal: Phases): number {
 }
 
 // ---- Initial state ----
-export function createInitialState(scenarioId = "studio", legacyTraits: string[] = [], legacyRun = 0): GameState {
+export function createInitialState(scenarioId = "studio", legacyTraits: string[] = [], legacyRun = 0, chosen = true): GameState {
   const sc = scenarioById(scenarioId);
   const has = (id: string) => legacyTraits.includes(id);
   const cash = sc.cash + (has("pockets") ? 25000 : 0);
   const rep = Math.max(sc.rep, has("taste") ? 30 : sc.rep);
   const burn = Math.round(sc.burn * (has("lean") ? 0.85 : 1));
+  const staff = startingCrew();
+  const bond = makeBond(staff.map((c) => c.id));
 
   return {
     studioName: "Doghouse Productions",
     cash, week: 0, members: sc.members, buzz: 0, reputation: rep, burn,
-    staff: startingCrew(),
+    staff,
     recruitPool: [rollRecruit(), rollRecruit(), rollRecruit()],
     project: null, phase: "idle",
     trend: rollTrend(), ownedUpgrades: [],
@@ -106,13 +117,33 @@ export function createInitialState(scenarioId = "studio", legacyTraits: string[]
     firedBeats: [], storyQueue: ["intro"], activeEventId: null,
     negativeWeeks: 0, gameOver: false,
     catalog: [], goals: rollGoals([]), rivals: seedRivals(), narrator: null,
+    bonds: bond ? [bond] : [], regulars: [], scenarioChosen: chosen,
     trendPreviewed: false, awardsPending: null, lastAwardYear: 0,
     legacyRun, legacyTraits, scenarioId,
     totalReleases: 0, bestScore: 0, equityTriggered: false, banner: null,
   };
 }
 
-export const weeklySalary = (staff: Creative[]) => staff.reduce((sum, c) => sum + c.salary, 0);
+/** Net production multiplier from chemistry/clash among the assigned crew. */
+export function bondMult(bonds: Bond[], assignedIds: string[]): number {
+  const set = new Set(assignedIds);
+  let m = 1;
+  for (const b of bonds) {
+    if (set.has(b.a) && set.has(b.b)) m += b.kind === "chemistry" ? 0.1 : -0.08;
+  }
+  return clamp(m, 0.7, 1.5);
+}
+
+/** Grow the regulars roster as the membership crosses ~120-member bands. */
+export function maybeAddRegular(s: GameState): Regular[] {
+  const target = Math.floor(s.members / 120);
+  if (s.regulars.length < target) return [...s.regulars, makeRegular(s.week)];
+  return s.regulars;
+}
+
+/** Assigned crew bill full; idle ("on call") crew bill half. */
+export const weeklySalary = (staff: Creative[], assigned?: Set<string>) =>
+  staff.reduce((sum, c) => sum + (assigned && !assigned.has(c.id) ? c.salary * 0.5 : c.salary), 0);
 
 // ---- Rivals ----
 function seedRivals(): Rival[] {
@@ -158,13 +189,14 @@ export function checkGoals(s: GameState): { goals: Goal[]; reward: number; logs:
 
 // ---- Production tick ----
 export function produceWeek(
-  project: Project, allStaff: Creative[], week: number, axisBoost: Partial<AxisPoints>
+  project: Project, allStaff: Creative[], week: number, axisBoost: Partial<AxisPoints>, bonds: Bond[] = []
 ): { project: Project; staff: Creative[]; logs: LogEntry[] } {
   const logs: LogEntry[] = [];
   const points = { ...project.points };
   let hype = project.hype;
   let rough = project.roughEdges;
   const focus = FOCUS[project.focus];
+  const bm = bondMult(bonds, project.staffIds);
   const ph = project.phases;
   const phaseMul: Record<Axis, number> = {
     vision: 0.6 + ph.concept * 1.2, story: 0.6 + ph.concept * 1.2,
@@ -188,7 +220,7 @@ export function produceWeek(
     const role = ROLES[c.role];
     for (const axis of AXES) {
       const boost = 1 + (axisBoost[axis] ?? 0);
-      points[axis] += ((c.stats[axis] * role.bias[axis]) / 4 * energyF * GLOBAL_RATE * outMult * spark + teamMorale) * boost * phaseMul[axis];
+      points[axis] += ((c.stats[axis] * role.bias[axis]) / 4 * energyF * GLOBAL_RATE * outMult * spark + teamMorale) * boost * phaseMul[axis] * bm;
     }
     hype += (c.stats.hustle * role.bias.hustle) / 4 * energyF * HYPE_RATE * spark * focus.buzzMult * (0.6 + ph.promo * 1.2);
     rough += rand(1.2, 3.2) * focus.roughMult;
@@ -224,7 +256,7 @@ export function resolveSpike(project: Project): { project: Project; success: boo
   const success = Math.random() < 0.55;
   const points = { ...project.points };
   if (success) {
-    for (const a of AXES) points[a] *= 1.3;
+    for (const a of AXES) points[a] *= 1.22;
     return { project: { ...project, points, spikeUsed: true }, success: true, text: "The gamble paid off — a real breakthrough." };
   }
   return { project: { ...project, roughEdges: project.roughEdges + 28, hype: Math.max(0, project.hype - 12), spikeUsed: true }, success: false, text: "The swing missed. Rough edges piled up." };
@@ -261,7 +293,7 @@ export function computeRelease(state: GameState, project: Project): ReleaseResul
     let lean = 0;
     for (const a of AXES) { const l = critic.lean[a]; if (l) lean += l * (project.points[a] / totalPts); }
     if (critic.lean.hype) lean += critic.lean.hype * hypeShare;
-    return Math.round(clamp((Q / medium.expectedQ) * 7 + lean + rand(-1, 1), 1, 10));
+    return Math.round(clamp((Q / medium.expectedQ) * 6.2 + lean + rand(-1, 1), 1, 10));
   });
   const score40 = criticScores.reduce((a, b) => a + b, 0);
   const f = score40 / 40;
@@ -273,7 +305,8 @@ export function computeRelease(state: GameState, project: Project): ReleaseResul
   let newMembers: number, buzzGain: number, revenue: number;
   if (medium.kind === "event") {
     const cap = venueCapOf(state);
-    newMembers = Math.min(cap, Math.round(medium.reach * f ** 2 * syn * tBonus * sBonus * (1 + state.buzz / 600) * bestMember * genBonus));
+    const loved = 1 + 0.06 * state.regulars.filter((r) => r.favVibe === project.vibe).length;
+    newMembers = Math.min(cap, Math.round(medium.reach * f ** 2 * syn * tBonus * sBonus * (1 + state.buzz / 600) * bestMember * genBonus * loved));
     buzzGain = Math.round(medium.reach * 0.05 * f * reachEra);
     revenue = Math.round(newMembers * medium.cashPer * medium.conv * 4);
   } else {
@@ -282,6 +315,10 @@ export function computeRelease(state: GameState, project: Project): ReleaseResul
     const units = (state.members + state.buzz) * medium.conv * f ** 1.5;
     revenue = Math.round(units * medium.cashPer * REV_MULT) + (medium.clientFee ?? 0);
   }
+
+  const adj = adjacencyMult(state.ownedUpgrades);
+  newMembers = Math.round(newMembers * adj);
+  buzzGain = Math.round(buzzGain * adj);
 
   let surprise: string | undefined;
   if (Math.random() < SURPRISE_CHANCE && score40 >= 18) {
@@ -384,7 +421,7 @@ export function estimateScore(
   const pMatch = phaseMatch(phases, phaseIdeal(m));
   const repF = 0.85 + (reputation / 100) * 0.3;
   const Q = raw * syn * 0.9 * repF * (0.85 + 0.3 * pMatch);
-  const per = clamp((Q / m.expectedQ) * 7, 1, 10);
+  const per = clamp((Q / m.expectedQ) * 6.2, 1, 10);
   const mid = Math.round(per * 4);
   return { low: clamp(mid - 5, 4, 40), high: clamp(mid + 4, 4, 40) };
 }

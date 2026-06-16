@@ -164,6 +164,12 @@ export interface AwardResult { year: number; categories: AwardCategory[] }
 
 export type Season = "spring" | "summer" | "fall" | "winter";
 
+/** Chemistry/clash between two crew — applies when both are on a project. */
+export interface Bond { a: string; b: string; kind: "chemistry" | "clash" }
+
+/** A named recurring member with a favorite vibe. */
+export interface Regular { name: string; favVibe: VibeId; since: number }
+
 export interface Trend { medium: MediumId; vibe: VibeId; monthsLeft: number }
 
 export interface Choice {
@@ -218,6 +224,9 @@ export interface GameState {
   catalog: CatalogItem[];
   goals: Goal[];
   rivals: Rival[];
+  bonds: Bond[];
+  regulars: Regular[];
+  scenarioChosen: boolean;     // start-screen scenario picked
   narrator: string | null;     // wry in-world reaction line
   trendPreviewed: boolean;      // bought next-trend foresight this cycle
   awardsPending: AwardResult | null;

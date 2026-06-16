@@ -4,7 +4,11 @@ A creative-studio management sim — run a studio, ship projects across media, r
 platform eras, build an audience, don't go broke. *Game Dev Story* re-themed as a
 creative house (Omni House as a game).
 
-See [DESIGN.md](DESIGN.md) for mechanics. This is an MVP vertical slice.
+See [DESIGN.md](DESIGN.md) for mechanics, [DESIGN-RESEARCH.md](DESIGN-RESEARCH.md) for the genre research.
+
+## ▶ Play it live
+
+**https://endlessriver-og.github.io/doghouse-productions/** (GitHub Pages, auto-served from the `gh-pages` branch). Deploy a new build with `pnpm deploy`.
 
 ## Run it
 
@@ -39,11 +43,27 @@ Steam ship checklist (post-MVP):
 Art is the other lift: current UI is placeholder CSS. A pixel-art office + creatives
 is the visual upgrade that makes it feel like a Kairosoft title.
 
+## Modding (Workshop data layer)
+
+Custom content needs no code. In the browser console set a localStorage pack and reload:
+
+```js
+localStorage.setItem("doghouse-mods", JSON.stringify({
+  mediums: [{ id:"mural", name:"Mural", kind:"event", weeks:3, budget:3000,
+    weights:{vision:.5,craft:.3,sound:.05,story:.15}, expectedQ:150,
+    reach:260, conv:.3, cashPer:15, blurb:"Paint the block." }],
+  vibes: [{ id:"sacred", name:"Sacred" }]
+}));
+```
+
 ## Status
 
-- [x] Core loop: pitch → produce → polish → release → score → payoff
-- [x] 8 mediums × 8 vibes + synergy grid
-- [x] Crew: hire / train / energy / leveling
-- [x] 4-critic /40 scoring, following + revenue, reputation
-- [x] Platform eras (passive), save/load, game-over
-- [ ] Platform-choice strategy, sprite art, sound, events/awards, balance pass, Steam wrapper
+- [x] Core loop: pitch → Focus + phases → produce → risk spike → polish → release → 4-critic /40
+- [x] Two-loop economy: creative → buzz → events → members → MRR vs rent burn
+- [x] 16 project types (events + creative), synergy grid, per-era trends + Scout
+- [x] Crew: traits, bonds (chemistry/clash), hire / train / energy / leveling
+- [x] Sequels + franchise residuals, named regulars, rival studios, annual awards
+- [x] Seasons, dual goals, prestige / New Game+, scenarios, onboarding
+- [x] Transparency (projected score), juice (animated reveal, confetti, narrator)
+- [x] Save/load, game-over, live deploy (GitHub Pages), Workshop data layer
+- [ ] Pixel sprite art, sound/music, deeper balance pass, Steam desktop wrapper

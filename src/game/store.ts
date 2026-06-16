@@ -1,12 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
-  EVENT_DECK, UPGRADES, mediumById, narratorLine, rollRecruit, signingFee, vibeById,
+  EVENT_DECK, UPGRADES, makeBond, mediumById, narratorLine, rollRecruit, signingFee, vibeById,
 } from "./data";
 import {
   BUZZ_DECAY, EVENT_CHANCE, GAMEOVER_FUSE, MEMBER_VALUE, WEEKS_PER_MONTH, WEEKS_PER_YEAR,
   applyTrain, axisBoostsOf, catalogFrom, checkBeats, checkGoals, clamp, computeRelease,
-  createInitialState, decayCatalog, newProject, polishWeek, produceWeek,
+  createInitialState, decayCatalog, maybeAddRegular, newProject, polishWeek, produceWeek,
   resolveAwards, resolveSpike, restWeek, rollGoals, rollTrend, seasonOf, tickRivals,
   trainCost, weeklySalary, yearOf,
 } from "./logic";
@@ -50,7 +50,7 @@ function applyGoals(s: GameState) {
 export const useGame = create<Store>()(
   persist(
     (set, get) => ({
-      ...createInitialState(),
+      ...createInitialState("studio", [], 0, false),
 
       startProject: (title, medium, vibe, staffIds, focus, phases, sequelOf, generation) => {
         const s = get();
@@ -76,7 +76,7 @@ export const useGame = create<Store>()(
       advanceWeek: () => {
         const s = get();
         if (blocked(s)) return;
-        let cash = s.cash - weeklySalary(s.staff);
+        let cash = s.cash - weeklySalary(s.staff, new Set(s.project?.staffIds ?? []));
         let staff = s.staff;
         let project = s.project;
         let phase: Phase = s.phase;
@@ -90,7 +90,7 @@ export const useGame = create<Store>()(
         let narrator = s.narrator;
 
         if (project && phase === "production") {
-          const res = produceWeek(project, staff, s.week + 1, axisBoostsOf(s));
+          const res = produceWeek(project, staff, s.week + 1, axisBoostsOf(s), s.bonds);
           project = res.project;
           staff = restWeek(res.staff, project.staffIds);
           logs = trim([...logs, ...res.logs]);
@@ -151,7 +151,8 @@ export const useGame = create<Store>()(
           activeEventId = EVENT_DECK[Math.floor(Math.random() * EVENT_DECK.length)].id;
         }
 
-        set({ ...interim, storyQueue, equityTriggered, activeEventId, awardsPending, lastAwardYear });
+        const escalatedBurn = (week % WEEKS_PER_MONTH === 0 && equityTriggered) ? Math.round(s.burn * 1.03) : s.burn;
+        set({ ...interim, storyQueue, equityTriggered, activeEventId, awardsPending, lastAwardYear, burn: escalatedBurn });
       },
 
       release: () => {
@@ -182,7 +183,7 @@ export const useGame = create<Store>()(
         const g = applyGoals(interim);
         interim = { ...interim, goals: g.goals, cash: g.cash, log: trim([...interim.log, ...g.logs]) };
         const newBeats = checkBeats(interim);
-        set({ ...interim, storyQueue: [...s.storyQueue, ...newBeats], equityTriggered: s.equityTriggered || newBeats.includes("equity") });
+        set({ ...interim, regulars: maybeAddRegular(interim), storyQueue: [...s.storyQueue, ...newBeats], equityTriggered: s.equityTriggered || newBeats.includes("equity") });
       },
 
       dismissRelease: () => set({ lastRelease: null }),
@@ -219,7 +220,7 @@ export const useGame = create<Store>()(
         const g = applyGoals(interim);
         interim = { ...interim, goals: g.goals, cash: g.cash, log: trim([...interim.log, ...g.logs]) };
         const newBeats = checkBeats(interim);
-        set({ ...interim, storyQueue: [...s.storyQueue, ...newBeats], equityTriggered: s.equityTriggered || newBeats.includes("equity") });
+        set({ ...interim, regulars: maybeAddRegular(interim), storyQueue: [...s.storyQueue, ...newBeats], equityTriggered: s.equityTriggered || newBeats.includes("equity") });
       },
 
       previewTrend: () => {
@@ -246,7 +247,9 @@ export const useGame = create<Store>()(
         if (!c) return;
         const fee = signingFee(c);
         if (s.cash < fee) return;
-        set({ cash: s.cash - fee, staff: [...s.staff, { ...c, assigned: false }], recruitPool: s.recruitPool.filter((x) => x.id !== id), narrator: narratorLine("hire"), log: trim([...s.log, mk(s.week, `Signed ${c.name} for $${fee.toLocaleString()}.`, "info")]) });
+        const newStaff = [...s.staff, { ...c, assigned: false }];
+        const nb = Math.random() < 0.5 ? makeBond(newStaff.map((x) => x.id)) : null;
+        set({ cash: s.cash - fee, staff: newStaff, bonds: nb ? [...s.bonds, nb] : s.bonds, recruitPool: s.recruitPool.filter((x) => x.id !== id), narrator: narratorLine("hire"), log: trim([...s.log, mk(s.week, `Signed ${c.name} for $${fee.toLocaleString()}.`, "info")]) });
       },
 
       refreshPool: () => {
@@ -274,7 +277,7 @@ export const useGame = create<Store>()(
       reset: () => set({ ...createInitialState(get().scenarioId, get().legacyTraits, get().legacyRun) }),
     }),
     {
-      name: "doghouse-save-v3",
+      name: "doghouse-save-v4",
       partialize: (s) => {
         const {
           startProject, advanceWeek, takeSpike, release, dismissRelease, dismissStory, dismissAwards,
@@ -291,7 +294,7 @@ export const useGame = create<Store>()(
   )
 );
 
-if (typeof localStorage !== "undefined" && !localStorage.getItem("doghouse-save-v3")) {
+if (typeof localStorage !== "undefined" && !localStorage.getItem("doghouse-save-v4")) {
   useGame.setState((s) => s);
 }
 

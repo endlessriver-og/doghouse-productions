@@ -220,7 +220,7 @@ const SYNERGY: Partial<Record<MediumId, Partial<Record<VibeId, SynergyTier>>>> =
   fashion:        { luxury: "S", rebellion: "A", experimental: "A", wholesome: "C" },
   podcast:        { wholesome: "S", dark: "A", nostalgia: "A", luxury: "C" },
 };
-const TIER_MULT: Record<SynergyTier, number> = { S: 1.5, A: 1.25, B: 1.0, C: 0.8 };
+const TIER_MULT: Record<SynergyTier, number> = { S: 1.4, A: 1.2, B: 1.0, C: 0.8 };
 export function synergyTier(medium: MediumId, vibe: VibeId): SynergyTier {
   return SYNERGY[medium]?.[vibe] ?? "B";
 }
@@ -294,6 +294,20 @@ export function rollRecruit(): Creative {
 
 export function signingFee(c: Creative): number { return c.salary * 6 }
 
+// ---------------------------------------------------------------- Workshop data layer
+// Community content packs: set localStorage "doghouse-mods" to JSON of the shape
+// { mediums?: Medium[], vibes?: Vibe[] }. Merged at startup so packs need no code.
+try {
+  if (typeof localStorage !== "undefined") {
+    const raw = localStorage.getItem("doghouse-mods");
+    if (raw) {
+      const mods = JSON.parse(raw) as { mediums?: Medium[]; vibes?: Vibe[] };
+      if (Array.isArray(mods.mediums)) for (const m of mods.mediums) if (!MEDIUMS.some((x) => x.id === m.id)) MEDIUMS.push(m);
+      if (Array.isArray(mods.vibes)) for (const v of mods.vibes) if (!VIBES.some((x) => x.id === v.id)) VIBES.push(v);
+    }
+  }
+} catch { /* ignore malformed mod pack */ }
+
 // ---------------------------------------------------------------- Focus modes
 import type { Focus, Phases, Season } from "./types";
 export interface FocusDef {
@@ -359,6 +373,25 @@ export function narratorLine(kind: string): string {
 }
 
 // ---------------------------------------------------------------- Goals (dual-track)
+// ---------------------------------------------------------------- Crew bonds + regulars
+import type { Bond, Regular } from "./types";
+export function makeBond(ids: string[]): Bond | null {
+  if (ids.length < 2) return null;
+  const i = Math.floor(Math.random() * ids.length);
+  let j = Math.floor(Math.random() * ids.length);
+  if (i === j) j = (j + 1) % ids.length;
+  return { a: ids[i], b: ids[j], kind: Math.random() < 0.62 ? "chemistry" : "clash" };
+}
+
+const REGULAR_NAMES = ["DJ Marisol", "Tariq", "Priya K.", "Old Man Cisco", "Quincy", "Lala", "the Hwang twins", "Bex", "Auntie Rose", "Tre", "Sunny", "Marcus V."];
+const VIBE_IDS: VibeId[] = ["romance", "hype", "nostalgia", "rebellion", "luxury", "wholesome", "experimental", "dark"];
+let regularIdx = 0;
+export function makeRegular(week: number): Regular {
+  const name = REGULAR_NAMES[regularIdx % REGULAR_NAMES.length] + (regularIdx >= REGULAR_NAMES.length ? ` ${Math.floor(regularIdx / REGULAR_NAMES.length) + 1}` : "");
+  regularIdx += 1;
+  return { name, favVibe: VIBE_IDS[Math.floor(Math.random() * VIBE_IDS.length)], since: week };
+}
+
 export interface GoalTemplate { id: string; label: string; reward: number; test: (s: import("./types").GameState) => boolean }
 export const GOAL_TEMPLATES: GoalTemplate[] = [
   { id: "members150", label: "Reach 150 members", reward: 2000, test: (s) => s.members >= 150 },
