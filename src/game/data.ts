@@ -475,7 +475,31 @@ export function narratorLine(kind: string): string {
 
 // ---------------------------------------------------------------- Goals (dual-track)
 // ---------------------------------------------------------------- Crew bonds + regulars
-import type { Bond, Regular } from "./types";
+import type { Bond, Boon, Regular, TraitId as TID } from "./types";
+
+// --- Roguelite: between-season draft (pick 1 of 3 boons) ---
+const DRAFT_TRAITS: TID[] = ["natural", "grinder", "creative_dir", "closer"];
+export function rollDraft(staff: Creative[], ownedUpgrades: string[]): Boon[] {
+  const owned = new Set(ownedUpgrades);
+  const builders: (() => Boon | null)[] = [
+    () => ({ id: "cash", kind: "cash", name: "Grant Money", blurb: "+$8,000 cash.", icon: "cred", amount: 8000 }),
+    () => ({ id: "cred", kind: "cred", name: "Creative Momentum", blurb: "+40 Cred.", icon: "sparkle", amount: 40 }),
+    () => ({ id: "members", kind: "members", name: "Word of Mouth", blurb: "+30 members — head start on the quota.", icon: "crew", amount: 30 }),
+    () => ({ id: "buzz", kind: "buzz", name: "It Caught Fire", blurb: "+60 buzz.", icon: "trend", amount: 60 }),
+    () => ({ id: "rent", kind: "rent", name: "Renegotiated Lease", blurb: "−$800/mo rent, permanently.", icon: "office", amount: 800 }),
+    () => { const r = rollCreative(); return { id: "hire_" + r.id, kind: "hire", name: `Sign ${r.name}`, blurb: `Free hire — ${ROLES[r.role].name}${r.trait ? ` · ${TRAITS[r.trait].name}` : ""}.`, icon: "crew", recruit: r }; },
+    () => { const avail = UPGRADES.filter((u) => !owned.has(u.id)); if (!avail.length) return null; const u = avail[Math.floor(Math.random() * avail.length)]; return { id: "space_" + u.id, kind: "space", name: `Build ${u.name}`, blurb: `Free space — ${u.blurb}`, icon: "upgrade", spaceId: u.id }; },
+    () => { if (!staff.length) return null; const c = staff[Math.floor(Math.random() * staff.length)]; const t = DRAFT_TRAITS[Math.floor(Math.random() * DRAFT_TRAITS.length)]; return { id: "trait_" + c.id, kind: "trait", name: `Mentor ${c.name.split(" ")[0]}`, blurb: `Gains the ${TRAITS[t].name} trait.`, icon: "spike", crewId: c.id, traitId: t }; },
+  ];
+  const out: Boon[] = []; const usedKind = new Set<string>();
+  for (const f of [...builders].sort(() => Math.random() - 0.5)) {
+    if (out.length >= 3) break;
+    const b = f();
+    if (b && !usedKind.has(b.kind)) { usedKind.add(b.kind); out.push(b); }
+  }
+  return out;
+}
+
 export function makeBond(ids: string[]): Bond | null {
   if (ids.length < 2) return null;
   const i = Math.floor(Math.random() * ids.length);

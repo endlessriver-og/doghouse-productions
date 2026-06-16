@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import {
   BOOTHS, CAMPAIGNS, EVENT_DECK, LABEL_ARCHETYPES, LABEL_FOUND_CASH, LABEL_FOUND_CRED,
   UPGRADES, VENDOR_ITEMS, labelUpgradeCost, makeBond, masteryLevel, mediumById, narratorLine,
-  rollContract, rollRecruit, signingFee, vibeById,
+  rollContract, rollDraft, rollRecruit, signingFee, vibeById,
 } from "./data";
 import {
   BUZZ_DECAY, EVENT_CHANCE, GAMEOVER_FUSE, MEMBER_VALUE, WEEKS_PER_MONTH, WEEKS_PER_YEAR,
@@ -41,6 +41,7 @@ interface Actions {
   buyVendorItem: (id: string) => void;
   dismissVendor: () => void;
   takeBailout: () => void;
+  pickBoon: (id: string) => void;
   prestige: (traitId: string) => void;
   newGame: (scenarioId: string) => void;
   clearBanner: () => void;
@@ -51,7 +52,7 @@ type Store = GameState & Actions;
 
 const blocked = (s: GameState) =>
   s.gameOver || !!s.activeEventId || s.storyQueue.length > 0 || !!s.lastRelease ||
-  !!s.awardsPending || s.showcasePending || s.vendorPending;
+  !!s.awardsPending || s.showcasePending || s.vendorPending || !!s.draftPending;
 
 /** Apply goal completions: returns patched fields. */
 function applyGoals(s: GameState) {
@@ -150,6 +151,7 @@ export const useGame = create<Store>()(
         let season = s.season, quota = s.quota, seasonStartWeek = s.seasonStartWeek;
         const peakMembers = Math.max(s.peakMembers, s.members);
         let runResult: GameState["runResult"] = gameOver ? "busted" : null;
+        let draftPending: GameState["draftPending"] = s.draftPending;
         if (!gameOver && week >= s.seasonStartWeek + SEASON_LEN) {
           if (s.members >= quota) {
             if (season >= MAX_SEASON) {
@@ -157,7 +159,8 @@ export const useGame = create<Store>()(
               logs = trim([...logs, mk(week, `Season ${season} cleared — you survived the whole run!`, "good")]);
             } else {
               season += 1; quota = quotaForSeason(season); seasonStartWeek = week;
-              banner = `★ Season ${season - 1} cleared! Next quota: ${quota.toLocaleString()} members.`;
+              draftPending = rollDraft(staff, s.ownedUpgrades);
+              banner = `★ Season ${season - 1} cleared! Draft a boon — next quota ${quota.toLocaleString()}.`;
               logs = trim([...logs, mk(week, `Season ${season - 1} cleared. Season ${season}: reach ${quota.toLocaleString()} members.`, "good")]);
             }
           } else {
@@ -167,7 +170,7 @@ export const useGame = create<Store>()(
         }
         const cloutBanked = runResult ? cloutFromRun(season, peakMembers, s.legendary.length, s.bestScore) : s.cloutBanked;
 
-        let interim: GameState = { ...s, cash, staff, project, phase, buzz, trend, week, negativeWeeks, gameOver, banner, log: logs, catalog, rivals, trendPreviewed, narrator, season, quota, seasonStartWeek, peakMembers, runResult, cloutBanked };
+        let interim: GameState = { ...s, cash, staff, project, phase, buzz, trend, week, negativeWeeks, gameOver, banner, log: logs, catalog, rivals, trendPreviewed, narrator, season, quota, seasonStartWeek, peakMembers, runResult, cloutBanked, draftPending };
 
         // goals
         const g = applyGoals(interim);
@@ -186,7 +189,7 @@ export const useGame = create<Store>()(
         const equityTriggered = s.equityTriggered || newBeats.includes("equity");
 
         let activeEventId: string | null = null;
-        if (!gameOver && week % WEEKS_PER_MONTH === 0 && storyQueue.length === 0 && !awardsPending && Math.random() < EVENT_CHANCE) {
+        if (!gameOver && week % WEEKS_PER_MONTH === 0 && storyQueue.length === 0 && !awardsPending && !draftPending && Math.random() < EVENT_CHANCE) {
           activeEventId = EVENT_DECK[Math.floor(Math.random() * EVENT_DECK.length)].id;
         }
 
@@ -402,6 +405,22 @@ export const useGame = create<Store>()(
         set({ cash: s.cash + s.burn, bailoutUsed: true, negativeWeeks: 0, banner: "AP floated you one month's rent", log: trim([...s.log, mk(s.week, "AP floated you one month's rent. Last time.", "info")]) });
       },
 
+      pickBoon: (id) => {
+        const s = get();
+        const b = s.draftPending?.find((x) => x.id === id);
+        if (!b) return;
+        const patch: Partial<GameState> = { draftPending: null };
+        if (b.kind === "cash") patch.cash = s.cash + (b.amount ?? 0);
+        else if (b.kind === "cred") patch.cred = s.cred + (b.amount ?? 0);
+        else if (b.kind === "members") patch.members = s.members + (b.amount ?? 0);
+        else if (b.kind === "buzz") patch.buzz = s.buzz + (b.amount ?? 0);
+        else if (b.kind === "rent") patch.burn = Math.max(2000, s.burn - (b.amount ?? 0));
+        else if (b.kind === "hire" && b.recruit) patch.staff = [...s.staff, { ...b.recruit, assigned: false }];
+        else if (b.kind === "space" && b.spaceId) { const u = UPGRADES.find((x) => x.id === b.spaceId); patch.ownedUpgrades = [...s.ownedUpgrades, b.spaceId]; if (u?.burnDelta) patch.burn = s.burn + u.burnDelta; }
+        else if (b.kind === "trait" && b.crewId && b.traitId) patch.staff = s.staff.map((c) => (c.id === b.crewId ? { ...c, trait: b.traitId } : c));
+        set({ ...patch, banner: `Drafted: ${b.name}`, log: trim([...s.log, mk(s.week, `Drafted boon — ${b.name}.`, "good")]) });
+      },
+
       prestige: (traitId) => {
         const s = get();
         set({ ...createInitialState(s.scenarioId, [...s.legacyTraits, traitId], s.legacyRun + 1, true, s.clout + s.cloutBanked) });
@@ -418,13 +437,13 @@ export const useGame = create<Store>()(
           startProject, advanceWeek, takeSpike, release, dismissRelease, dismissStory, dismissAwards,
           resolveEvent, previewTrend, buyUpgrade, hire, refreshPool, train, promote, acceptContract,
           foundLabel, upgradeLabel, runCampaign, chooseShowcase, buyVendorItem, dismissVendor,
-          takeBailout, prestige, newGame, clearBanner, clearNarrator, reset, ...data
+          takeBailout, pickBoon, prestige, newGame, clearBanner, clearNarrator, reset, ...data
         } = s;
         void startProject; void advanceWeek; void takeSpike; void release; void dismissRelease;
         void dismissStory; void dismissAwards; void resolveEvent; void previewTrend; void buyUpgrade;
         void hire; void refreshPool; void train; void promote; void acceptContract; void foundLabel;
         void upgradeLabel; void runCampaign; void chooseShowcase; void buyVendorItem; void dismissVendor;
-        void takeBailout; void prestige; void newGame; void clearBanner; void clearNarrator; void reset;
+        void takeBailout; void pickBoon; void prestige; void newGame; void clearBanner; void clearNarrator; void reset;
         return data;
       },
     }

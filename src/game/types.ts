@@ -196,6 +196,20 @@ export type Season = "spring" | "summer" | "fall" | "winter";
 /** Roguelite run outcome (drives the run-summary modal). */
 export type RunResult = "busted" | "missed" | "cleared" | null;
 
+/** A between-season draft boon (Slay-the-Spire-style reward pick). */
+export interface Boon {
+  id: string;
+  kind: "cash" | "cred" | "members" | "buzz" | "rent" | "hire" | "space" | "trait";
+  name: string;
+  blurb: string;
+  icon: string;        // IconName
+  amount?: number;
+  recruit?: Creative;  // hire
+  spaceId?: string;    // space
+  crewId?: string;     // trait target
+  traitId?: TraitId;   // trait granted
+}
+
 /** Chemistry/clash between two crew — applies when both are on a project. */
 export interface Bond { a: string; b: string; kind: "chemistry" | "clash" }
 
@@ -284,6 +298,7 @@ export interface GameState {
   runResult: RunResult;      // set when the run ends -> summary modal
   cloutBanked: number;       // Clout earned this run (shown on summary)
   clout: number;             // meta-currency, carries across runs
+  draftPending: Boon[] | null; // between-season boon draft (pick one)
   // stats
   totalReleases: number;
   bestScore: number;

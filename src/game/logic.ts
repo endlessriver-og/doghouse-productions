@@ -134,7 +134,7 @@ export function createInitialState(scenarioId = "studio", legacyTraits: string[]
     trendPreviewed: false, awardsPending: null, lastAwardYear: 0,
     legacyRun, legacyTraits, scenarioId,
     season: 1, quota: quotaForSeason(1), seasonStartWeek: 0, peakMembers: sc.members,
-    runResult: null, cloutBanked: 0, clout,
+    runResult: null, cloutBanked: 0, clout, draftPending: null,
     totalReleases: 0, bestScore: 0, equityTriggered: false, banner: null,
   };
 }

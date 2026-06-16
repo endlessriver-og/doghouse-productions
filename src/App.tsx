@@ -15,7 +15,7 @@ import { StoryModal } from "./ui/StoryModal";
 import { UpgradesPanel } from "./ui/UpgradesPanel";
 import { VendorModal } from "./ui/VendorModal";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
-import { Icon } from "./ui/Icon";
+import { Icon, type IconName } from "./ui/Icon";
 import { burst, burstFromEvent, confetti, flashScreen, useCountUp, useDelta } from "./ui/juice";
 import { isMuted, sfx, toggleMute } from "./ui/sound";
 
@@ -91,6 +91,7 @@ export function App() {
   const modal = !s.scenarioChosen ? "start"
     : s.gameOver ? "over"
     : s.lastRelease ? "release"
+    : s.draftPending ? "draft"
     : s.awardsPending ? "awards"
     : s.showcasePending ? "showcase"
     : s.vendorPending ? "vendor"
@@ -213,6 +214,7 @@ export function App() {
       {modal === "story" && <StoryModal />}
       {modal === "event" && <EventModal />}
       {modal === "release" && <ScoreReveal />}
+      {modal === "draft" && <DraftModal />}
       {modal === "awards" && <AwardsModal />}
       {modal === "showcase" && <ShowcaseModal />}
       {modal === "vendor" && <VendorModal />}
@@ -544,6 +546,27 @@ function LogPanel() {
 }
 
 // ---------------- Game over ----------------
+function DraftModal() {
+  const draft = useGame((s) => s.draftPending)!;
+  const pick = useGame((s) => s.pickBoon);
+  return (
+    <div className="modal-backdrop">
+      <div className="modal story-big" onClick={(e) => e.stopPropagation()}>
+        <div className="story-kicker"><Icon name="sparkle" size={12} /> SEASON CLEARED · DRAFT A BOON</div>
+        <h2 className="story-title">Pick one</h2>
+        <div className="choices-list">
+          {draft.map((b) => (
+            <button key={b.id} className="choice draft-choice" onClick={() => pick(b.id)}>
+              <span className="choice-label"><Icon name={b.icon as IconName} size={14} /> {b.name}</span>
+              <span className="choice-blurb">{b.blurb}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GameOverModal() {
   const s = useGame();
   const reset = useGame((a) => a.reset);
