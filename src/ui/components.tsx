@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { ROLES, mediumById, synergyTier, vibeById } from "../game/data";
-import type { MediumId, RoleId, SynergyTier, VibeId } from "../game/types";
+import { ROLES, TRAITS, mediumById, synergyTier, vibeById } from "../game/data";
+import type { MediumId, RoleId, SynergyTier, TraitId, VibeId } from "../game/types";
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 export const compact = (n: number) =>
@@ -53,4 +53,11 @@ const TIER_CLASS: Record<SynergyTier, string> = { S: "tier-s", A: "tier-a", B: "
 export function SynergyBadge({ medium, vibe }: { medium: MediumId; vibe: VibeId }) {
   const t = synergyTier(medium, vibe);
   return <span className={`tier ${TIER_CLASS[t]}`} title="Medium × Vibe synergy">{t}</span>;
+}
+
+export const traitName = (t?: TraitId) => (t ? TRAITS[t].name : null);
+export function TraitChip({ trait }: { trait?: TraitId }) {
+  if (!trait) return null;
+  const tr = TRAITS[trait];
+  return <span className="trait-chip" title={tr.blurb}>{tr.name}</span>;
 }

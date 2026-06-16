@@ -1,6 +1,6 @@
-// Core domain types for Doghouse Productions.
+// Core domain types for Doghouse Productions — an Omni House creative-studio sim.
 
-/** The four quality axes a project accumulates. Hustle is separate (drives marketing/hype). */
+/** The four quality axes a project accumulates. Hustle is separate (drives buzz). */
 export type Axis = "vision" | "craft" | "sound" | "story";
 export type StatKey = Axis | "hustle";
 
@@ -8,17 +8,17 @@ export type Stats = Record<StatKey, number>;
 export type AxisPoints = Record<Axis, number>;
 
 export type RoleId =
-  | "director"
-  | "editor"
-  | "composer"
-  | "writer"
-  | "marketer"
-  | "producer";
+  | "director" | "editor" | "composer" | "writer" | "marketer" | "producer";
+
+export type TraitId =
+  | "ambient_host" | "framework_op" | "raises_room" | "closer"
+  | "reliable" | "creative_dir" | "grinder" | "natural";
 
 export interface Creative {
   id: string;
   name: string;
   role: RoleId;
+  trait?: TraitId;
   stats: Stats;
   level: number;
   xp: number;
@@ -27,47 +27,33 @@ export interface Creative {
   assigned: boolean;
 }
 
+export type ProjectKind = "event" | "creative";
+
 export type MediumId =
-  | "single"
-  | "musicvideo"
-  | "album"
-  | "shortfilm"
-  | "brand"
-  | "event"
-  | "fashion"
-  | "podcast";
+  // events (grow Members)
+  | "openmic" | "arthouse" | "tunetown" | "lovelingo" | "karaoke" | "playback" | "movienight" | "creatorconnect"
+  // creative work (grow Buzz + cash)
+  | "single" | "musicvideo" | "album" | "shortfilm" | "brand" | "photoset" | "fashion" | "podcast";
 
 export type VibeId =
-  | "romance"
-  | "hype"
-  | "nostalgia"
-  | "rebellion"
-  | "luxury"
-  | "wholesome"
-  | "experimental"
-  | "dark";
-
-/** How a medium turns success into money. */
-export type Monetization = "streams" | "tickets" | "client" | "merch";
+  | "romance" | "hype" | "nostalgia" | "rebellion" | "luxury" | "wholesome" | "experimental" | "dark";
 
 export interface Medium {
   id: MediumId;
   name: string;
-  weeks: number; // base production length
-  budget: number; // upfront cost to start
-  weights: AxisPoints; // what the critics care about for this medium (sums ~1)
-  baseFans: number; // scale of following a perfect score can mint
-  conversion: number; // fraction of following that "buys" per release
-  price: number; // revenue per converted unit
-  monetization: Monetization;
-  clientFee?: number; // upfront guaranteed pay for client work (brand)
-  expectedQ: number; // quality needed to score ~7/critic // TUNE
+  kind: ProjectKind;
+  weeks: number;
+  budget: number;
+  weights: AxisPoints; // what critics weigh (sums ~1)
+  expectedQ: number;   // quality for ~7/critic // TUNE
+  reach: number;       // base magnitude of audience effect
+  conv: number;        // fraction of audience that converts to cash
+  cashPer: number;     // $ per converted unit
+  clientFee?: number;  // upfront guaranteed pay (brand work)
+  blurb: string;
 }
 
-export interface Vibe {
-  id: VibeId;
-  name: string;
-}
+export interface Vibe { id: VibeId; name: string }
 
 export type SynergyTier = "S" | "A" | "B" | "C";
 
@@ -75,15 +61,34 @@ export interface Critic {
   id: string;
   name: string;
   blurb: string;
-  /** Per-axis lean: critic adds (lean·normalizedAxisShare) to its raw /10. */
   lean: Partial<AxisPoints> & { hype?: number };
 }
 
 export interface PlatformEra {
+  id: string; name: string; startYear: number; reach: number;
+}
+
+export interface Trait {
+  id: TraitId;
+  name: string;
+  blurb: string;
+  outputMult?: number;   // production point multiplier
+  energyDrain?: number;  // override weekly energy drain
+  buzzMult?: number;     // buzz payoff multiplier when on a project
+  memberMult?: number;   // member payoff multiplier
+  morale?: number;       // team-wide flat output bump (aura)
+}
+
+export interface Upgrade {
   id: string;
   name: string;
-  startYear: number; // in-game year this platform becomes current
-  reach: number; // reach multiplier while current // TUNE
+  blurb: string;
+  cost: number;
+  axis?: Axis;       // permanent boost to one axis' production
+  axisBoost?: number;
+  venueCap?: number; // raises event member ceiling
+  burnDelta?: number; // changes monthly burn
+  unlocks?: MediumId[];
 }
 
 export type Phase = "idle" | "production" | "polish";
@@ -95,7 +100,7 @@ export interface Project {
   weeksTotal: number;
   weeksElapsed: number;
   points: AxisPoints;
-  hype: number;
+  hype: number;       // project buzz built during production
   roughEdges: number;
   staffIds: string[];
 }
@@ -104,12 +109,36 @@ export interface ReleaseResult {
   title: string;
   medium: MediumId;
   vibe: VibeId;
-  criticScores: number[]; // four /10
+  kind: ProjectKind;
+  criticScores: number[];
   score40: number;
-  newFollowers: number;
+  newMembers: number;
+  buzzGain: number;
   revenue: number;
   legendary: boolean;
   week: number;
+}
+
+export interface Trend { medium: MediumId; vibe: VibeId; monthsLeft: number }
+
+export interface Choice {
+  label: string;
+  blurb?: string;
+  // Effects applied to state on pick. Resolved in logic (pure).
+  cash?: number; members?: number; buzz?: number; rep?: number; morale?: number;
+  log: string;
+}
+export interface GameEventCard {
+  id: string;
+  title: string;
+  body: string;
+  choices: Choice[];
+}
+
+export interface StoryBeat {
+  id: string;
+  title: string;
+  body: string;
 }
 
 export interface LogEntry {
@@ -122,15 +151,27 @@ export interface GameState {
   studioName: string;
   cash: number;
   week: number;
-  following: number;
-  reputation: number; // 0..100
+  members: number;      // durable audience -> MRR
+  buzz: number;         // momentum, decays monthly
+  reputation: number;   // 0..100
+  burn: number;         // monthly operating burn
   staff: Creative[];
   recruitPool: Creative[];
   project: Project | null;
   phase: Phase;
+  trend: Trend;
+  ownedUpgrades: string[];
   log: LogEntry[];
   legendary: ReleaseResult[];
   lastRelease: ReleaseResult | null;
-  negativeWeeks: number; // consecutive weeks in the red -> game over fuse
+  firedBeats: string[];
+  storyQueue: string[];     // beat ids awaiting display
+  activeEventId: string | null;
+  negativeWeeks: number;
   gameOver: boolean;
+  // stats
+  totalReleases: number;
+  bestScore: number;
+  equityTriggered: boolean;
+  banner: string | null;    // transient toast (month/era)
 }

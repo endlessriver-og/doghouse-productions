@@ -201,4 +201,108 @@ h1, h2 { margin: 0; text-transform: uppercase; letter-spacing: 1px; }
 .critic-name { font-size: 12px; font-weight: bold; text-transform: uppercase; }
 .critic-blurb { font-size: 10px; color: var(--ink-soft); }
 .score40 { text-align: center; font-size: 40px; font-weight: bold; }
-.payoff { display: flex; justify-content: center; gap: 24px; font-weight: bold; font-size: 15px; }
+.payoff { display: flex; justify-content: center; gap: 20px; font-weight: bold; font-size: 15px; flex-wrap: wrap; }
+.pay-good { color: var(--good); }
+
+/* ======================= Omni expansion ======================= */
+.stat-accent { background: #f3e2c0; }
+.stat-value.sm { font-size: 12px; }
+.slash { color: var(--ink-soft); margin: 0 2px; }
+.stat-mrr.stat-ok .stat-value { color: var(--good); }
+.stat-mrr.stat-bad .stat-value { color: var(--bad); }
+
+/* Trend bar */
+.trend-bar {
+  background: var(--bg2); border: 2px solid var(--edge); box-shadow: var(--shadow);
+  padding: 6px 14px; margin-bottom: 16px; font-size: 13px;
+}
+.trend-live { background: #f6e2cf; outline: 2px solid var(--accent); outline-offset: -5px; }
+
+/* Kind tabs (new project) */
+.kind-tabs { display: flex; gap: 0; padding: 12px 16px 0; }
+.kind-tab {
+  flex: 1; font-family: inherit; font-size: 13px; font-weight: bold; cursor: pointer;
+  border: 2px solid var(--edge); background: var(--bg2); padding: 8px; text-transform: uppercase;
+}
+.kind-tab:first-child { border-right: none; }
+.kind-on { background: var(--accent); color: #fff; }
+.kt-sub { display: block; font-size: 9px; font-weight: normal; opacity: .8; text-transform: none; }
+.medium-blurb { font-size: 12px; color: var(--ink-soft); margin: 6px 0 2px; font-style: italic; }
+.chip-hot { border-color: var(--accent); }
+.hot-tag { color: var(--accent); font-size: 11px; font-weight: bold; }
+
+/* Trait chip */
+.trait-chip {
+  display: inline-block; font-size: 10px; font-weight: bold; padding: 1px 6px; margin: 4px 0;
+  background: var(--violet); color: #fff; border: 1px solid var(--edge); text-transform: uppercase; letter-spacing: .5px;
+}
+.creative-row .trait-chip { margin: 0; }
+
+/* Kind pill on project */
+.kind-pill { font-size: 10px; font-weight: bold; padding: 2px 7px; border: 2px solid var(--edge); }
+.kind-event { background: var(--teal); color: #fff; }
+.kind-creative { background: var(--accent); color: #fff; }
+.idle-stats { font-size: 12px; }
+
+/* Upgrades / The Space */
+.upgrades { display: flex; flex-direction: column; gap: 8px; }
+.upgrade { border: 2px solid var(--edge); background: var(--bg2); padding: 8px 10px; }
+.upgrade-own { background: #e3efe5; outline: 2px dashed var(--good); outline-offset: -5px; }
+.up-top { display: flex; justify-content: space-between; align-items: baseline; }
+.up-name { font-weight: bold; font-size: 13px; }
+.up-cost { font-weight: bold; font-size: 12px; }
+.up-built { font-size: 10px; font-weight: bold; color: var(--good); }
+.up-blurb { font-size: 11px; color: var(--ink-soft); margin: 3px 0 6px; }
+.upgrade .btn { padding: 4px 10px; font-size: 11px; }
+
+/* Story + event modals */
+.story, .event { max-width: 480px; padding: 0 0 4px; }
+.story-kicker { background: var(--edge); color: var(--gold); font-size: 10px; font-weight: bold; letter-spacing: 2px; padding: 6px 16px; }
+.story-title { font-size: 18px; margin: 14px 16px 8px; }
+.story-body { font-size: 14px; line-height: 1.5; margin: 0 16px 16px; color: var(--ink); }
+.story-big { border-color: var(--gold); box-shadow: 6px 6px 0 var(--gold); }
+.story-big .story-title { color: var(--accent-d); }
+.choices-list { display: flex; flex-direction: column; gap: 8px; margin: 0 16px 16px; }
+.choice {
+  font-family: inherit; text-align: left; cursor: pointer; padding: 10px 12px;
+  border: 2px solid var(--edge); background: var(--bg2); box-shadow: 2px 2px 0 var(--edge);
+}
+.choice:active { transform: translate(2px, 2px); box-shadow: none; }
+.choice-label { display: block; font-weight: bold; font-size: 14px; }
+.choice-blurb { display: block; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+
+/* Animated score reveal */
+.reveal .critics { margin: 16px; }
+.critic-hidden { opacity: .25; }
+.critic-in { animation: pop .4s ease-out; }
+@keyframes pop { from { opacity: 0; transform: scale(.8) translateY(10px); } to { opacity: 1; transform: none; } }
+.stamp { animation: stamp .35s ease-out; }
+@keyframes stamp { from { transform: scale(1.7) rotate(-3deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Confetti */
+.confetti-bit {
+  position: fixed; z-index: 100; pointer-events: none; border: 1px solid rgba(0,0,0,.25);
+  animation: confetti-fall 1.5s ease-in forwards;
+}
+@keyframes confetti-fall {
+  from { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  to { transform: translate(calc(var(--dx) * 12vw), var(--dy)) rotate(var(--rot)); opacity: .15; }
+}
+
+/* Screen shake */
+.app.shake { animation: shake .6s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake {
+  10%, 90% { transform: translate(-1px, 0); }
+  20%, 80% { transform: translate(2px, 0); }
+  30%, 50%, 70% { transform: translate(-4px, 0); }
+  40%, 60% { transform: translate(4px, 0); }
+}
+
+/* Banner toast */
+.banner-toast {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  background: var(--edge); color: var(--bg); border: 2px solid var(--edge);
+  box-shadow: 4px 4px 0 rgba(0,0,0,.3); padding: 10px 18px; font-size: 13px; font-weight: bold;
+  z-index: 60; animation: toast-in .3s ease-out; max-width: 90vw; text-align: center;
+}
+@keyframes toast-in { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
