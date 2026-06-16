@@ -10,6 +10,7 @@ import { PrestigeModal } from "./ui/PrestigeModal";
 import { ScoreReveal } from "./ui/ScoreReveal";
 import { ShowcaseModal } from "./ui/ShowcaseModal";
 import { StartScreen } from "./ui/StartScreen";
+import { StudioScene } from "./ui/StudioScene";
 import { StoryModal } from "./ui/StoryModal";
 import { UpgradesPanel } from "./ui/UpgradesPanel";
 import { VendorModal } from "./ui/VendorModal";
@@ -31,6 +32,7 @@ export function App() {
   const year = yearOf(s.week);
   const era = eraForYear(year);
   const season = seasonOf(s.week);
+  const sceneMood = ({ spring: "dusk", summer: "midday", fall: "dusk", winter: "night" } as const)[season.id];
   const mrr = mrrOf(s);
   const residual = residualOf(s);
   const cash = useCountUp(s.cash);
@@ -88,6 +90,8 @@ export function App() {
           {s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}
         </button>
       </div>
+
+      <StudioScene mood={sceneMood} />
 
       {s.narrator && <div className="narrator">“{s.narrator}” <span className="narrator-by">— the scene report</span></div>}
 
