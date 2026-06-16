@@ -79,3 +79,14 @@ Build covers ~**22 of 30** major GDS systems. The 8 gaps cluster into **4 real o
 **staff progression**, a **contracts** economy, a **late-game label/platform** play, and an active
 **marketing/showcase** layer. None are blockers for the current loop — they're the depth that
 separates "fun demo" from "100-hour tycoon."
+
+## ✅ UPDATE (v5 — built more robust than GDS)
+All four real gaps + the cheap Tier-2 adds shipped:
+- **Career ladder** — 3-tier promotions per role (stacking stats + output, unlock labels). Spent via **Cred**, a 2nd currency earned producing/releasing — GDS's Research-Data analog.
+- **Contracts board** — timed client commissions: cash + Cred reward, deadline + miss penalty (verified the penalty path).
+- **Your own Label** — 3 archetypes (Records/Films/Fest), %rev or %member bonus + monthly income, upgradeable. The platform-holder play.
+- **Marketing** — ad-spend ladder (flyers→press→OOH→viral) with **diminishing returns** (×0.6/reuse), + annual **Showcase** booth tiers (GameDex analog).
+- **Mastery leveling**, annual **Vendor**, crew **capacity** tied to spaces, one-time **AP bailout**.
+
+Now ~**29 of 30** systems. Consciously still skipped: the full 20×79×24 unlock trees, 8-attribute
+layer, gender/age fan demographics (deliberate — keeps the sim leaner than GDS).
