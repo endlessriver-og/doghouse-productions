@@ -1,16 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
-  EVENT_DECK, UPGRADES, makeBond, mediumById, narratorLine, rollRecruit, signingFee, vibeById,
+  BOOTHS, CAMPAIGNS, EVENT_DECK, LABEL_ARCHETYPES, LABEL_FOUND_CASH, LABEL_FOUND_CRED,
+  UPGRADES, VENDOR_ITEMS, labelUpgradeCost, makeBond, masteryLevel, mediumById, narratorLine,
+  rollContract, rollRecruit, signingFee, vibeById,
 } from "./data";
 import {
   BUZZ_DECAY, EVENT_CHANCE, GAMEOVER_FUSE, MEMBER_VALUE, WEEKS_PER_MONTH, WEEKS_PER_YEAR,
-  applyTrain, axisBoostsOf, catalogFrom, checkBeats, checkGoals, clamp, computeRelease,
-  createInitialState, decayCatalog, maybeAddRegular, newProject, polishWeek, produceWeek,
-  resolveAwards, resolveSpike, restWeek, rollGoals, rollTrend, seasonOf, tickRivals,
-  trainCost, weeklySalary, yearOf,
+  applyTrain, axisBoostsOf, canPromote, catalogFrom, checkBeats, checkGoals, clamp, computeRelease,
+  createInitialState, crewCapOf, decayCatalog, maybeAddRegular, newProject, polishWeek, produceWeek,
+  promoteCreative, promoteCredCost, resolveAwards, resolveSpike, restWeek, rollGoals, rollTrend,
+  seasonOf, tickRivals, trainCost, weeklySalary, yearOf,
 } from "./logic";
-import type { Focus, GameState, LogEntry, MediumId, Phase, Phases, VibeId } from "./types";
+import type { Focus, GameState, LabelKind, LogEntry, MediumId, Phase, Phases, VibeId } from "./types";
 
 const mk = (week: number, text: string, kind: LogEntry["kind"]): LogEntry => ({ week, text, kind });
 const trim = (arr: LogEntry[]) => arr.slice(-80);
@@ -29,6 +31,15 @@ interface Actions {
   hire: (id: string) => void;
   refreshPool: () => void;
   train: (id: string) => void;
+  promote: (id: string) => void;
+  acceptContract: (id: string) => void;
+  foundLabel: (kind: LabelKind) => void;
+  upgradeLabel: () => void;
+  runCampaign: (id: string) => void;
+  chooseShowcase: (boothId: string) => void;
+  buyVendorItem: (id: string) => void;
+  dismissVendor: () => void;
+  takeBailout: () => void;
   prestige: (traitId: string) => void;
   newGame: (scenarioId: string) => void;
   clearBanner: () => void;
@@ -38,7 +49,8 @@ interface Actions {
 type Store = GameState & Actions;
 
 const blocked = (s: GameState) =>
-  s.gameOver || !!s.activeEventId || s.storyQueue.length > 0 || !!s.lastRelease || !!s.awardsPending;
+  s.gameOver || !!s.activeEventId || s.storyQueue.length > 0 || !!s.lastRelease ||
+  !!s.awardsPending || s.showcasePending || s.vendorPending;
 
 /** Apply goal completions: returns patched fields. */
 function applyGoals(s: GameState) {
@@ -56,7 +68,7 @@ export const useGame = create<Store>()(
         const s = get();
         if (s.project || s.gameOver || staffIds.length === 0) return;
         const m = mediumById(medium);
-        const project = newProject(title, medium, vibe, staffIds, focus, phases, sequelOf, generation);
+        const project = newProject(title, medium, vibe, staffIds, focus, phases, sequelOf, generation, masteryLevel(s.mediumXp[medium]), masteryLevel(s.vibeXp[vibe]));
         const ids = new Set(staffIds);
         const tag = sequelOf ? ` (sequel to "${sequelOf}")` : "";
         set({
@@ -88,8 +100,11 @@ export const useGame = create<Store>()(
         let rivals = s.rivals;
         let trendPreviewed = s.trendPreviewed;
         let narrator = s.narrator;
+        let cred = s.cred;
+        let contracts = s.contracts;
 
         if (project && phase === "production") {
+          cred += 2;
           const res = produceWeek(project, staff, s.week + 1, axisBoostsOf(s), s.bonds);
           project = res.project;
           staff = restWeek(res.staff, project.staffIds);
@@ -111,10 +126,12 @@ export const useGame = create<Store>()(
         if (week % WEEKS_PER_MONTH === 0) {
           const mrr = Math.round(s.members * MEMBER_VALUE);
           const residual = catalog.reduce((sum, c) => sum + c.residual, 0);
-          cash += mrr + residual - s.burn;
+          const labelIncome = s.label ? s.label.monthlyIncome : 0;
+          cash += mrr + residual + labelIncome - s.burn;
           buzz = Math.round(buzz * BUZZ_DECAY);
           catalog = decayCatalog(catalog);
           rivals = tickRivals(rivals);
+          contracts = [rollContract(s.reputation, week), rollContract(s.reputation, week), rollContract(s.reputation, week)];
           trend = { ...trend, monthsLeft: trend.monthsLeft - 1 };
           let trendMsg = "";
           if (trend.monthsLeft <= 0) { trend = rollTrend(); trendPreviewed = false; trendMsg = ` · new trend ${mediumById(trend.medium).name} × ${vibeById(trend.vibe).name}`; }
@@ -152,7 +169,9 @@ export const useGame = create<Store>()(
         }
 
         const escalatedBurn = (week % WEEKS_PER_MONTH === 0 && equityTriggered) ? Math.round(s.burn * 1.03) : s.burn;
-        set({ ...interim, storyQueue, equityTriggered, activeEventId, awardsPending, lastAwardYear, burn: escalatedBurn });
+        const showcasePending = s.showcasePending || (!gameOver && week % WEEKS_PER_YEAR === 24);
+        const vendorPending = s.vendorPending || (!gameOver && week % WEEKS_PER_YEAR === 12);
+        set({ ...interim, cred, contracts, storyQueue, equityTriggered, activeEventId, awardsPending, lastAwardYear, burn: escalatedBurn, showcasePending, vendorPending });
       },
 
       release: () => {
@@ -164,13 +183,30 @@ export const useGame = create<Store>()(
         if (r.surprise) logs = trim([...logs, mk(s.week, `🎁 ${r.surprise}`, "good")]);
         if (r.legendary) logs = trim([...logs, mk(s.week, `🏆 "${r.title}" is legendary!`, "good")]);
         const cat = catalogFrom(r);
+        const credGain = Math.round(r.score40 / 2) + 4;
+        let cash2 = s.cash + r.revenue;
+        let cred2 = s.cred + credGain;
+        let rep2 = Math.min(100, s.reputation + repGain);
+        let activeContract = s.activeContract;
+        if (activeContract) {
+          const onTime = s.project.deadlineWeek === undefined || s.week <= s.project.deadlineWeek;
+          if (r.score40 >= activeContract.minScore && onTime) {
+            cash2 += activeContract.rewardCash; cred2 += activeContract.rewardCred; rep2 = Math.min(100, rep2 + 3);
+            logs = trim([...logs, mk(s.week, `Contract delivered for ${activeContract.client}: +$${activeContract.rewardCash.toLocaleString()}, +${activeContract.rewardCred} cred.`, "good")]);
+          } else {
+            cash2 -= activeContract.penaltyCash; rep2 = Math.max(0, rep2 - 4);
+            logs = trim([...logs, mk(s.week, `Missed the brief for ${activeContract.client}: −$${activeContract.penaltyCash.toLocaleString()}.`, "bad")]);
+          }
+          activeContract = null;
+        }
+        const mediumXp = { ...s.mediumXp, [r.medium]: (s.mediumXp[r.medium] ?? 0) + 1 };
+        const vibeXp = { ...s.vibeXp, [r.vibe]: (s.vibeXp[r.vibe] ?? 0) + 1 };
 
         let interim: GameState = {
           ...s, project: null, phase: "idle",
-          cash: s.cash + r.revenue,
+          cash: cash2, cred: cred2, reputation: rep2, activeContract, mediumXp, vibeXp,
           members: s.members + r.newMembers,
           buzz: s.buzz + r.buzzGain,
-          reputation: Math.min(100, s.reputation + repGain),
           staff: s.staff.map((c) => ({ ...c, assigned: false })),
           lastRelease: r,
           legendary: r.legendary ? [...s.legendary, r] : s.legendary,
@@ -246,7 +282,7 @@ export const useGame = create<Store>()(
         const c = s.recruitPool.find((x) => x.id === id);
         if (!c) return;
         const fee = signingFee(c);
-        if (s.cash < fee) return;
+        if (s.cash < fee || s.staff.length >= crewCapOf(s)) return;
         const newStaff = [...s.staff, { ...c, assigned: false }];
         const nb = Math.random() < 0.5 ? makeBond(newStaff.map((x) => x.id)) : null;
         set({ cash: s.cash - fee, staff: newStaff, bonds: nb ? [...s.bonds, nb] : s.bonds, recruitPool: s.recruitPool.filter((x) => x.id !== id), narrator: narratorLine("hire"), log: trim([...s.log, mk(s.week, `Signed ${c.name} for $${fee.toLocaleString()}.`, "info")]) });
@@ -267,6 +303,83 @@ export const useGame = create<Store>()(
         set({ cash: s.cash - cost, staff: s.staff.map((x) => (x.id === id ? applyTrain(x) : x)), log: trim([...s.log, mk(s.week, `${c.name} did a masterclass.`, "good")]) });
       },
 
+      promote: (id) => {
+        const s = get();
+        const c = s.staff.find((x) => x.id === id);
+        if (!c || !canPromote(c)) return;
+        const cost = promoteCredCost(c);
+        if (s.cred < cost) return;
+        const promoted = promoteCreative(c);
+        set({ cred: s.cred - cost, staff: s.staff.map((x) => (x.id === id ? promoted : x)), banner: `${c.name} promoted`, log: trim([...s.log, mk(s.week, `${c.name} promoted — ${promoted.tier === 2 ? "senior" : "lead"} role.`, "good")]) });
+      },
+
+      acceptContract: (id) => {
+        const s = get();
+        if (s.project || s.gameOver) return;
+        const k = s.contracts.find((x) => x.id === id);
+        if (!k || s.reputation < k.repReq) return;
+        const m = mediumById(k.medium);
+        if (s.cash < m.budget) return;
+        const staffIds = s.staff.map((c) => c.id);
+        const ids = new Set(staffIds);
+        const project = { ...newProject(`${k.client} gig`, k.medium, k.vibe, staffIds, "balanced" as Focus, undefined, undefined, 1, masteryLevel(s.mediumXp[k.medium]), masteryLevel(s.vibeXp[k.vibe])), contractId: k.id, deadlineWeek: s.week + k.weeks };
+        set({ project, phase: "production", cash: s.cash - m.budget, activeContract: k, contracts: s.contracts.filter((x) => x.id !== id), staff: s.staff.map((c) => ({ ...c, assigned: ids.has(c.id) })), log: trim([...s.log, mk(s.week, `Took the ${k.client} contract — ${m.name}, due in ${k.weeks}wk.`, "info")]) });
+      },
+
+      foundLabel: (kind) => {
+        const s = get();
+        if (s.label || s.cash < LABEL_FOUND_CASH || s.cred < LABEL_FOUND_CRED) return;
+        const label = { ...LABEL_ARCHETYPES[kind], tier: 1 };
+        set({ cash: s.cash - LABEL_FOUND_CASH, cred: s.cred - LABEL_FOUND_CRED, label, reputation: Math.min(100, s.reputation + 5), banner: `Founded ${label.name}`, log: trim([...s.log, mk(s.week, `Founded ${label.name}. You're a platform now.`, "good")]) });
+      },
+
+      upgradeLabel: () => {
+        const s = get();
+        if (!s.label) return;
+        const cost = labelUpgradeCost(s.label.tier);
+        if (s.cash < cost.cash || s.cred < cost.cred) return;
+        const label = { ...s.label, tier: s.label.tier + 1, revBonus: s.label.revBonus + 0.08, memberBonus: s.label.memberBonus + 0.06, monthlyIncome: Math.round(s.label.monthlyIncome * 1.4) };
+        set({ cash: s.cash - cost.cash, cred: s.cred - cost.cred, label, banner: `${label.name} leveled up`, log: trim([...s.log, mk(s.week, `${label.name} upgraded to tier ${label.tier}.`, "good")]) });
+      },
+
+      runCampaign: (id) => {
+        const s = get();
+        const c = CAMPAIGNS.find((x) => x.id === id);
+        if (!c || s.reputation < c.repReq || s.cash < c.cost || s.cred < c.cred) return;
+        const used = s.campaignUse[id] ?? 0;
+        const dim = Math.pow(0.6, used);
+        const buzz = Math.round(c.buzz * dim);
+        const members = Math.round(c.members * dim);
+        set({ cash: s.cash - c.cost, cred: s.cred - c.cred, buzz: s.buzz + buzz, members: s.members + members, campaignUse: { ...s.campaignUse, [id]: used + 1 }, log: trim([...s.log, mk(s.week, `${c.name}: +${buzz} buzz, +${members} members${used ? " (diminishing)" : ""}.`, "good")]) });
+      },
+
+      chooseShowcase: (boothId) => {
+        const s = get();
+        const b = BOOTHS.find((x) => x.id === boothId);
+        if (!b || s.cash < b.cost) return;
+        set({ showcasePending: false, cash: s.cash - b.cost, buzz: s.buzz + b.buzz, members: s.members + b.members, reputation: Math.min(100, s.reputation + b.rep), banner: b.id === "skip" ? "Skipped the Showcase" : `Showcase: +${b.members} members, +${b.buzz} buzz`, log: trim([...s.log, mk(s.week, b.id === "skip" ? "Skipped the Showcase." : `Showcase ${b.name}: +${b.members} members, +${b.buzz} buzz.`, "good")]) });
+      },
+
+      buyVendorItem: (id) => {
+        const s = get();
+        const item = VENDOR_ITEMS.find((x) => x.id === id);
+        if (!item || s.cash < item.cost) return;
+        const patch: Partial<GameState> = { cash: s.cash - item.cost, vendorPending: false };
+        if (id === "inspiration") patch.cred = s.cred + 50;
+        else if (id === "energy") patch.staff = s.staff.map((c) => ({ ...c, energy: 100 }));
+        else if (id === "headhunt") patch.recruitPool = [rollRecruit(), rollRecruit(), rollRecruit()];
+        else if (id === "manual") patch.cred = s.cred + 40;
+        set({ ...patch, log: trim([...s.log, mk(s.week, `Vendor: bought ${item.name}.`, "info")]) });
+      },
+
+      dismissVendor: () => set({ vendorPending: false }),
+
+      takeBailout: () => {
+        const s = get();
+        if (s.bailoutUsed) return;
+        set({ cash: s.cash + s.burn, bailoutUsed: true, negativeWeeks: 0, banner: "AP floated you one month's rent", log: trim([...s.log, mk(s.week, "AP floated you one month's rent. Last time.", "info")]) });
+      },
+
       prestige: (traitId) => {
         const s = get();
         set({ ...createInitialState(s.scenarioId, [...s.legacyTraits, traitId], s.legacyRun + 1) });
@@ -277,24 +390,26 @@ export const useGame = create<Store>()(
       reset: () => set({ ...createInitialState(get().scenarioId, get().legacyTraits, get().legacyRun) }),
     }),
     {
-      name: "doghouse-save-v4",
+      name: "doghouse-save-v5",
       partialize: (s) => {
         const {
           startProject, advanceWeek, takeSpike, release, dismissRelease, dismissStory, dismissAwards,
-          resolveEvent, previewTrend, buyUpgrade, hire, refreshPool, train, prestige, newGame,
-          clearBanner, clearNarrator, reset, ...data
+          resolveEvent, previewTrend, buyUpgrade, hire, refreshPool, train, promote, acceptContract,
+          foundLabel, upgradeLabel, runCampaign, chooseShowcase, buyVendorItem, dismissVendor,
+          takeBailout, prestige, newGame, clearBanner, clearNarrator, reset, ...data
         } = s;
         void startProject; void advanceWeek; void takeSpike; void release; void dismissRelease;
         void dismissStory; void dismissAwards; void resolveEvent; void previewTrend; void buyUpgrade;
-        void hire; void refreshPool; void train; void prestige; void newGame; void clearBanner;
-        void clearNarrator; void reset;
+        void hire; void refreshPool; void train; void promote; void acceptContract; void foundLabel;
+        void upgradeLabel; void runCampaign; void chooseShowcase; void buyVendorItem; void dismissVendor;
+        void takeBailout; void prestige; void newGame; void clearBanner; void clearNarrator; void reset;
         return data;
       },
     }
   )
 );
 
-if (typeof localStorage !== "undefined" && !localStorage.getItem("doghouse-save-v4")) {
+if (typeof localStorage !== "undefined" && !localStorage.getItem("doghouse-save-v5")) {
   useGame.setState((s) => s);
 }
 

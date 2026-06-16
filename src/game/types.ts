@@ -22,6 +22,7 @@ export interface Creative {
   stats: Stats;
   level: number;
   xp: number;
+  tier: number;     // career-ladder tier (0 = base role, up to 2)
   salary: number; // per week
   energy: number; // 0..100; low energy => weaker output
   assigned: boolean;
@@ -113,6 +114,34 @@ export interface Project {
   spikeUsed: boolean;     // mid-project risk gamble consumed
   sequelOf?: string;      // title of the project this is a sequel to
   generation: number;     // 1 = original, 2+ = sequel depth
+  contractId?: string;    // fulfilling a client contract
+  deadlineWeek?: number;  // contract deadline (absolute week)
+}
+
+/** A timed client commission: cash + cred for hitting a brief on time. */
+export interface Contract {
+  id: string;
+  client: string;
+  brief: string;
+  medium: MediumId;
+  vibe: VibeId;
+  weeks: number;          // deadline length from acceptance
+  minScore: number;       // quality bar to get full reward
+  rewardCash: number;
+  rewardCred: number;
+  penaltyCash: number;
+  repReq: number;         // reputation needed to take it
+}
+
+export type LabelKind = "record" | "production" | "festival";
+/** Your own label/platform — late-game ownership play. */
+export interface OwnedLabel {
+  kind: LabelKind;
+  name: string;
+  tier: number;           // upgradeable
+  revBonus: number;       // % bump to creative revenue
+  memberBonus: number;    // % bump to event members
+  monthlyIncome: number;
 }
 
 export interface ReleaseResult {
@@ -227,6 +256,16 @@ export interface GameState {
   bonds: Bond[];
   regulars: Regular[];
   scenarioChosen: boolean;     // start-screen scenario picked
+  cred: number;                // creative capital (2nd currency)
+  contracts: Contract[];        // available client commissions
+  activeContract: Contract | null; // the one in progress
+  label: OwnedLabel | null;     // your own label/platform
+  campaignUse: Record<string, number>; // marketing diminishing-returns tracker
+  showcasePending: boolean;     // annual Showcase awaiting a choice
+  vendorPending: boolean;       // annual vendor visit awaiting
+  mediumXp: Partial<Record<MediumId, number>>; // mastery
+  vibeXp: Partial<Record<VibeId, number>>;
+  bailoutUsed: boolean;
   narrator: string | null;     // wry in-world reaction line
   trendPreviewed: boolean;      // bought next-trend foresight this cycle
   awardsPending: AwardResult | null;

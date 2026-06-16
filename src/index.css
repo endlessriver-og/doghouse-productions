@@ -389,3 +389,32 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .onboard { border: 2px dashed var(--accent); background: #f6e2cf; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
 .onboard-step { font-size: 12px; }
 .step-done { color: var(--good); text-decoration: line-through; }
+
+/* ======================= Robust wave (v5) ======================= */
+.tier-chip { display: inline-block; font-size: 10px; font-weight: bold; padding: 1px 5px; margin: 0 0 4px 4px; background: var(--gold); border: 1px solid var(--edge); }
+.ct-flag { color: var(--accent-d); font-weight: bold; }
+
+/* Contracts */
+.contracts { display: flex; flex-direction: column; gap: 8px; }
+.contract { border: 2px solid var(--edge); background: var(--bg2); padding: 8px 10px; }
+.contract-locked { opacity: .6; }
+.ct-top { display: flex; justify-content: space-between; align-items: baseline; }
+.ct-client { font-weight: bold; font-size: 13px; }
+.ct-reward { font-weight: bold; font-size: 12px; color: var(--good); }
+.ct-brief { font-size: 11px; color: var(--ink-soft); margin: 3px 0 6px; }
+.contract .btn { padding: 4px 10px; font-size: 11px; }
+
+/* Label */
+.label-own { display: flex; flex-direction: column; gap: 6px; }
+.lbl-name { font-weight: bold; font-size: 14px; }
+.label-pick { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.label-card { font-family: inherit; text-align: left; cursor: pointer; border: 2px solid var(--edge); background: var(--bg2); box-shadow: 2px 2px 0 var(--edge); padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.label-card:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
+.label-own .btn, .label-pick .btn { padding: 4px 10px; font-size: 11px; }
+
+/* Marketing */
+.campaigns { display: flex; flex-direction: column; gap: 8px; }
+.campaign { border: 2px solid var(--edge); background: var(--bg2); padding: 8px 10px; }
+.cp-top { display: flex; justify-content: space-between; align-items: baseline; }
+.cp-name { font-weight: bold; font-size: 13px; }
+.campaign .btn { padding: 4px 10px; font-size: 11px; margin-top: 4px; }

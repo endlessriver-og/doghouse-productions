@@ -3,8 +3,8 @@
 // and a deck of Omni-flavored choice events. Balance numbers marked // TUNE.
 
 import type {
-  Creative, Critic, GameEventCard, Medium, MediumId, PlatformEra, RoleId, Stats,
-  StoryBeat, SynergyTier, Trait, TraitId, Upgrade, Vibe, VibeId,
+  Contract, Creative, Critic, GameEventCard, LabelKind, Medium, MediumId, OwnedLabel,
+  PlatformEra, RoleId, Stats, StoryBeat, SynergyTier, Trait, TraitId, Upgrade, Vibe, VibeId,
 } from "./types";
 
 // ---------------------------------------------------------------- Mediums
@@ -255,7 +255,7 @@ export function rollCreative(power = 1): Creative {
   return {
     id: nextId(),
     name: `${FIRST[Math.floor(Math.random() * FIRST.length)]} ${LAST[Math.floor(Math.random() * LAST.length)]}`,
-    role, trait, stats, level: 1, xp: 0,
+    role, trait, stats, level: 1, xp: 0, tier: 0,
     salary: Math.round(total * 7 + 120), energy: 100, assigned: false,
   };
 }
@@ -307,6 +307,108 @@ try {
     }
   }
 } catch { /* ignore malformed mod pack */ }
+
+// ================= v5: careers · contracts · labels · marketing · vendor · mastery =================
+
+// ---- Career ladder (more robust than GDS: each tier = stat stack + a named perk) ----
+export interface CareerTier { title: string; statBonus: Partial<Stats>; perk: string }
+export const CAREERS: Record<RoleId, CareerTier[]> = {
+  director: [
+    { title: "Director", statBonus: {}, perk: "" },
+    { title: "Art Director", statBonus: { vision: 7, craft: 4 }, perk: "+12% output" },
+    { title: "Creative Director", statBonus: { vision: 12, craft: 7, story: 4 }, perk: "+24% output · can found a label" },
+  ],
+  editor: [
+    { title: "Editor", statBonus: {}, perk: "" },
+    { title: "Lead Editor", statBonus: { craft: 7, vision: 3 }, perk: "+12% output" },
+    { title: "Post Supervisor", statBonus: { craft: 12, vision: 6, sound: 4 }, perk: "+24% output · can found a label" },
+  ],
+  composer: [
+    { title: "Composer", statBonus: {}, perk: "" },
+    { title: "Music Director", statBonus: { sound: 7, craft: 3 }, perk: "+12% output" },
+    { title: "Sound Lead", statBonus: { sound: 12, craft: 6, story: 4 }, perk: "+24% output · can found a label" },
+  ],
+  writer: [
+    { title: "Writer", statBonus: {}, perk: "" },
+    { title: "Story Lead", statBonus: { story: 7, vision: 3 }, perk: "+12% output" },
+    { title: "Showrunner", statBonus: { story: 12, vision: 6, craft: 4 }, perk: "+24% output · can found a label" },
+  ],
+  marketer: [
+    { title: "Host", statBonus: {}, perk: "" },
+    { title: "Promoter", statBonus: { hustle: 8, vision: 2 }, perk: "+12% buzz" },
+    { title: "Scene-Maker", statBonus: { hustle: 14, vision: 5 }, perk: "+24% buzz · can found a label" },
+  ],
+  producer: [
+    { title: "Producer", statBonus: {}, perk: "" },
+    { title: "Exec Producer", statBonus: { vision: 4, craft: 4, sound: 4, story: 4 }, perk: "+12% output" },
+    { title: "Studio Head", statBonus: { vision: 7, craft: 7, sound: 7, story: 7, hustle: 4 }, perk: "+24% output · can found a label" },
+  ],
+};
+export const PROMOTE_LEVEL = [0, 4, 8];     // crew level needed for tier 1 / 2
+export const PROMOTE_CRED = [0, 45, 110];   // cred cost for tier 1 / 2
+export const careerTitle = (role: RoleId, tier: number) => CAREERS[role][tier]?.title ?? CAREERS[role][0].title;
+
+// ---- Contracts ----
+const CONTRACT_CLIENTS = ["Mark @ LA Today", "Crate & Co.", "Sunset Beverage", "Atlas Sneakers", "Verde Spirits", "Civic Arts Grant", "Mode Magazine", "Northside Records", "Halcyon Hotel", "Bloom Cosmetics"];
+let contractIdx = 0;
+export function rollContract(rep: number, week: number): Contract {
+  const m = MEDIUMS[Math.floor(Math.random() * MEDIUMS.length)];
+  const vibe = VIBES[Math.floor(Math.random() * VIBES.length)].id;
+  const scale = 1 + rep / 60;
+  const weeks = m.weeks + Math.floor(rand(2, 5));
+  const client = CONTRACT_CLIENTS[contractIdx % CONTRACT_CLIENTS.length]; contractIdx += 1;
+  const minScore = Math.round(22 + rand(0, 8));
+  return {
+    id: `k${week}_${contractIdx}_${Math.floor(Math.random() * 1e5).toString(36)}`,
+    client, brief: `${m.name} · ${VIBES.find((v) => v.id === vibe)!.name}`,
+    medium: m.id, vibe, weeks, minScore,
+    rewardCash: Math.round((m.budget * 2.2 + 6000) * scale),
+    rewardCred: Math.round(15 + rand(0, 20) * scale),
+    penaltyCash: Math.round(m.budget * 0.8),
+    repReq: Math.max(0, Math.round((minScore - 26) * 2 + rand(0, 6))),
+  };
+}
+
+// ---- Labels (your own platform) ----
+export const LABEL_ARCHETYPES: Record<LabelKind, Omit<OwnedLabel, "tier">> = {
+  record:     { kind: "record",     name: "Doghouse Records", revBonus: 0.25, memberBonus: 0.1, monthlyIncome: 1600 },
+  production: { kind: "production",  name: "Doghouse Films",   revBonus: 0.32, memberBonus: 0.05, monthlyIncome: 1300 },
+  festival:   { kind: "festival",    name: "Doghouse Fest",    revBonus: 0.1,  memberBonus: 0.3,  monthlyIncome: 1900 },
+};
+export const LABEL_FOUND_CASH = 30000;
+export const LABEL_FOUND_CRED = 90;
+export const labelUpgradeCost = (tier: number) => ({ cash: 20000 + tier * 15000, cred: 60 + tier * 40 });
+
+// ---- Marketing campaigns (diminishing returns on reuse) ----
+export interface Campaign { id: string; name: string; cost: number; cred: number; buzz: number; members: number; repReq: number }
+export const CAMPAIGNS: Campaign[] = [
+  { id: "flyers", name: "Flyer Run", cost: 1500, cred: 0, buzz: 28, members: 6, repReq: 0 },
+  { id: "press", name: "Press Push", cost: 5000, cred: 5, buzz: 65, members: 16, repReq: 10 },
+  { id: "ooh", name: "Out-of-Home", cost: 14000, cred: 10, buzz: 140, members: 38, repReq: 25 },
+  { id: "viral", name: "Viral Stunt", cost: 30000, cred: 22, buzz: 300, members: 75, repReq: 42 },
+];
+
+// ---- Showcase (annual, GameDex-style booth tiers) ----
+export interface Booth { id: string; name: string; cost: number; buzz: number; members: number; rep: number }
+export const BOOTHS: Booth[] = [
+  { id: "skip", name: "Skip it", cost: 0, buzz: 0, members: 0, rep: 0 },
+  { id: "table", name: "A Table", cost: 2000, buzz: 50, members: 22, rep: 1 },
+  { id: "booth", name: "Full Booth", cost: 9000, buzz: 140, members: 65, rep: 3 },
+  { id: "headline", name: "Headline Stage", cost: 26000, buzz: 320, members: 160, rep: 6 },
+];
+
+// ---- Vendor (annual consumables) ----
+export interface VendorItem { id: string; name: string; cost: number; blurb: string }
+export const VENDOR_ITEMS: VendorItem[] = [
+  { id: "inspiration", name: "Inspiration Pack", cost: 6000, blurb: "+50 Cred." },
+  { id: "energy", name: "Studio Retreat", cost: 3000, blurb: "Restore all crew energy." },
+  { id: "headhunt", name: "Headhunt", cost: 5000, blurb: "Fresh, stronger casting pool." },
+  { id: "manual", name: "Career Manual", cost: 7000, blurb: "+40 Cred toward promotions." },
+];
+
+// ---- Mastery (reuse a format/vibe → it levels → base-point head start) ----
+export const masteryLevel = (xp = 0) => Math.floor(xp / 3); // every 3 uses = +1 level
+export const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 // ---------------------------------------------------------------- Focus modes
 import type { Focus, Phases, Season } from "./types";

@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { FOCUS, eraForYear, mediumById, signingFee, vibeById } from "./game/data";
-import { estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
+import { FOCUS, careerTitle, eraForYear, mediumById, signingFee, vibeById } from "./game/data";
+import { canPromote, crewCapOf, estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, promoteCredCost, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
 import { useGame } from "./game/store";
 import { AwardsModal } from "./ui/AwardsModal";
 import { EventModal } from "./ui/EventModal";
 import { NewProjectModal } from "./ui/NewProjectModal";
+import { ContractsPanel, LabelPanel, MarketingPanel } from "./ui/Panels5";
 import { PrestigeModal } from "./ui/PrestigeModal";
 import { ScoreReveal } from "./ui/ScoreReveal";
+import { ShowcaseModal } from "./ui/ShowcaseModal";
 import { StartScreen } from "./ui/StartScreen";
 import { StoryModal } from "./ui/StoryModal";
 import { UpgradesPanel } from "./ui/UpgradesPanel";
+import { VendorModal } from "./ui/VendorModal";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
 import { useCountUp } from "./ui/juice";
 
@@ -49,6 +52,8 @@ export function App() {
     : s.gameOver ? "over"
     : s.lastRelease ? "release"
     : s.awardsPending ? "awards"
+    : s.showcasePending ? "showcase"
+    : s.vendorPending ? "vendor"
     : s.storyQueue.length ? "story"
     : s.activeEventId ? "event"
     : showPrestige ? "prestige"
@@ -70,6 +75,7 @@ export function App() {
           <Stat label="Cash" value={money(cash)} warn={s.cash < 0} />
           <Stat label="Members" value={compact(members)} accent />
           <Stat label="Buzz" value={compact(buzz)} />
+          <Stat label="Cred" value={`${s.cred}◆`} />
           <MrrStat mrr={mrr + residual} burn={s.burn} residual={residual} />
           <Stat label="Rep" value={`${s.reputation}`} />
         </div>
@@ -92,6 +98,9 @@ export function App() {
           <StaffPanel />
         </div>
         <div className="col-side">
+          <ContractsPanel />
+          <MarketingPanel />
+          <LabelPanel />
           <UpgradesPanel />
           {s.catalog.length > 0 && <CatalogPanel />}
           {s.regulars.length > 0 && <RegularsPanel />}
@@ -107,6 +116,8 @@ export function App() {
       {modal === "event" && <EventModal />}
       {modal === "release" && <ScoreReveal />}
       {modal === "awards" && <AwardsModal />}
+      {modal === "showcase" && <ShowcaseModal />}
+      {modal === "vendor" && <VendorModal />}
       {modal === "prestige" && <PrestigeModal onClose={() => setShowPrestige(false)} />}
       {modal === "over" && <GameOverModal />}
 
@@ -133,6 +144,9 @@ function IdleView({ onNew, canPrestige, onPrestige }: { onNew: () => void; canPr
   const advanceWeek = useGame((s) => s.advanceWeek);
   const legendary = useGame((s) => s.legendary);
   const totalReleases = useGame((s) => s.totalReleases);
+  const cash = useGame((s) => s.cash);
+  const bailoutUsed = useGame((s) => s.bailoutUsed);
+  const takeBailout = useGame((s) => s.takeBailout);
   return (
     <Panel title="Studio Floor">
       <div className="idle">
@@ -141,6 +155,7 @@ function IdleView({ onNew, canPrestige, onPrestige }: { onNew: () => void; canPr
           <Button variant="primary" onClick={onNew}>＋ New Project</Button>
           <Button variant="ghost" onClick={advanceWeek} title="Pass a week">Skip Week ▸</Button>
           {canPrestige && <Button variant="ghost" onClick={onPrestige} title="Reset for a permanent bonus">↻ Legacy Reset</Button>}
+          {cash < 0 && !bailoutUsed && <Button variant="ghost" onClick={takeBailout} title="AP floats one month's rent (once per run)">🆘 AP Bailout</Button>}
         </div>
         <OnboardingHint />
         <div className="idle-stats"><span className="muted">{totalReleases} shipped · {legendary.length} legendary</span></div>
@@ -207,6 +222,7 @@ function ProjectView() {
           <span>🔥 Buzz <b>{Math.round(p.hype)}</b></span>
           <span>🩹 Rough <b>{Math.round(p.roughEdges)}</b></span>
           <span>👥 {crew.map((c) => c.name.split(" ")[0]).join(", ")}</span>
+          {s.activeContract && <span className="ct-flag">📋 {s.activeContract.client} · need {s.activeContract.minScore}/40 by wk {p.deadlineWeek}</span>}
         </div>
 
         <div className="row">
@@ -297,8 +313,10 @@ function RivalsPanel() {
 function StaffPanel() {
   const staff = useGame((s) => s.staff);
   const cash = useGame((s) => s.cash);
+  const cred = useGame((s) => s.cred);
   const bonds = useGame((s) => s.bonds);
   const train = useGame((s) => s.train);
+  const promote = useGame((s) => s.promote);
   return (
     <Panel title="Crew">
       <div className="crew-grid">
@@ -306,17 +324,23 @@ function StaffPanel() {
           const cost = trainCost(c);
           const bond = bonds.find((b) => b.a === c.id || b.b === c.id);
           const partner = bond ? staff.find((x) => x.id === (bond.a === c.id ? bond.b : bond.a)) : null;
+          const promoteReady = canPromote(c);
+          const promoteCost = promoteCredCost(c);
           return (
             <div key={c.id} className={`creative-card ${c.assigned ? "card-busy" : ""}`}>
-              <div className="cc-head"><span className="cc-name">{c.name}</span><span className="cc-role">{roleName(c.role)} · Lv{c.level}</span></div>
+              <div className="cc-head"><span className="cc-name">{c.name}</span><span className="cc-role">{careerTitle(c.role, c.tier)} · Lv{c.level}</span></div>
               <TraitChip trait={c.trait} />
+              {c.tier > 0 && <span className="tier-chip">★{c.tier}</span>}
               {bond && partner && <span className={`bond-chip bond-${bond.kind}`}>{bond.kind === "chemistry" ? "♥" : "⚡"} {partner.name.split(" ")[0]}</span>}
               <div className="cc-stats">
                 <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} />
               </div>
               <div className="cc-foot">
                 <span className="muted">⚡{c.energy} · {money(c.salary)}/wk</span>
-                <Button variant="ghost" disabled={cash < cost} onClick={() => train(c.id)} title="Boost stats">Train {money(cost)}</Button>
+                <div className="row" style={{ gap: 4 }}>
+                  {promoteReady && <Button variant="ghost" disabled={cred < promoteCost} onClick={() => promote(c.id)} title="Career promotion (Cred)">↑{promoteCost}◆</Button>}
+                  <Button variant="ghost" disabled={cash < cost} onClick={() => train(c.id)} title="Boost stats">Train {money(cost)}</Button>
+                </div>
               </div>
             </div>
           );
@@ -335,8 +359,11 @@ function RecruitPanel() {
   const cash = useGame((s) => s.cash);
   const hire = useGame((s) => s.hire);
   const refreshPool = useGame((s) => s.refreshPool);
+  const cap = useGame(crewCapOf);
+  const count = useGame((s) => s.staff.length);
+  const full = count >= cap;
   return (
-    <Panel title="Casting" right={<Button variant="ghost" disabled={cash < 800} onClick={refreshPool}>↻ $800</Button>}>
+    <Panel title={`Casting · ${count}/${cap}`} right={<Button variant="ghost" disabled={cash < 800} onClick={refreshPool}>↻ $800</Button>}>
       <div className="recruit-list">
         {pool.map((c) => {
           const fee = signingFee(c);
@@ -345,7 +372,7 @@ function RecruitPanel() {
               <div className="rc-top"><span className="cc-name">{c.name}</span><span className="cc-role">{roleName(c.role)}</span></div>
               <TraitChip trait={c.trait} />
               <div className="cc-stats sm"><Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} /></div>
-              <Button variant="primary" disabled={cash < fee} onClick={() => hire(c.id)}>Sign {money(fee)}</Button>
+              <Button variant="primary" disabled={cash < fee || full} onClick={() => hire(c.id)}>{full ? "Full" : `Sign ${money(fee)}`}</Button>
             </div>
           );
         })}

@@ -2,14 +2,14 @@
 // surprises, rivals (intentional run-to-run variety).
 
 import {
-  AWARD_CATEGORIES, CRITICS, DEFAULT_PHASES, FOCUS, GOAL_TEMPLATES, LEGACY_TRAITS,
-  MEDIUMS, RIVAL_NAMES, ROLES, SEASONS, TRAITS, UPGRADES, eraForYear, makeBond,
-  makeRegular, mediumById, narratorLine, rollRecruit, scenarioById, seasonForMonth,
-  startingCrew, synergyMult,
+  AWARD_CATEGORIES, CAREERS, CRITICS, DEFAULT_PHASES, FOCUS, GOAL_TEMPLATES, LEGACY_TRAITS,
+  MEDIUMS, PROMOTE_CRED, PROMOTE_LEVEL, RIVAL_NAMES, ROLES, SEASONS, TRAITS, UPGRADES,
+  eraForYear, makeBond, makeRegular, mediumById, narratorLine, rollContract,
+  rollRecruit, scenarioById, seasonForMonth, startingCrew, synergyMult,
 } from "./data";
 import type {
-  AwardResult, Axis, AxisPoints, Bond, CatalogItem, Creative, Focus, GameState, Goal,
-  LogEntry, Medium, Phases, Project, Regular, ReleaseResult, Rival, Trend,
+  AwardResult, Axis, AxisPoints, Bond, CatalogItem, Creative, Focus, GameState,
+  Goal, LogEntry, Medium, Phases, Project, Regular, ReleaseResult, Rival, Trend,
 } from "./types";
 
 // ---- Tunable constants ----
@@ -118,11 +118,32 @@ export function createInitialState(scenarioId = "studio", legacyTraits: string[]
     negativeWeeks: 0, gameOver: false,
     catalog: [], goals: rollGoals([]), rivals: seedRivals(), narrator: null,
     bonds: bond ? [bond] : [], regulars: [], scenarioChosen: chosen,
+    cred: 0, contracts: [rollContract(rep, 0), rollContract(rep, 0), rollContract(rep, 0)],
+    activeContract: null,
+    label: null, campaignUse: {}, showcasePending: false, vendorPending: false,
+    mediumXp: {}, vibeXp: {}, bailoutUsed: false,
     trendPreviewed: false, awardsPending: null, lastAwardYear: 0,
     legacyRun, legacyTraits, scenarioId,
     totalReleases: 0, bestScore: 0, equityTriggered: false, banner: null,
   };
 }
+
+// ---- Careers ----
+export function canPromote(c: Creative): boolean {
+  const next = c.tier + 1;
+  return next <= 2 && c.level >= PROMOTE_LEVEL[next];
+}
+export const promoteCredCost = (c: Creative) => PROMOTE_CRED[c.tier + 1] ?? 999;
+export function promoteCreative(c: Creative): Creative {
+  const next = c.tier + 1;
+  if (next > 2) return c;
+  const bonus = CAREERS[c.role][next].statBonus;
+  const stats = { ...c.stats };
+  for (const k of Object.keys(bonus) as (keyof typeof bonus)[]) stats[k] = (stats[k] ?? 0) + (bonus[k] ?? 0);
+  return { ...c, tier: next, stats, salary: Math.round(c.salary * 1.25) };
+}
+export const crewCapOf = (s: GameState) => 5 + s.ownedUpgrades.length;
+export const labelUnlocked = (s: GameState) => !s.label && (s.staff.some((c) => c.tier >= 2) || s.reputation >= 45);
 
 /** Net production multiplier from chemistry/clash among the assigned crew. */
 export function bondMult(bonds: Bond[], assignedIds: string[]): number {
@@ -210,7 +231,7 @@ export function produceWeek(
     if (!assigned.has(c.id)) return c;
     const trait = c.trait ? TRAITS[c.trait] : undefined;
     const energyF = 0.5 + 0.5 * (c.energy / 100);
-    const outMult = (trait?.outputMult ?? 1) * focus.outMult;
+    const outMult = (trait?.outputMult ?? 1) * focus.outMult * (1 + 0.12 * c.tier);
     const drain = trait?.energyDrain ?? ENERGY_DRAIN;
     let spark = 1;
     if (Math.random() < SPARK_CHANCE * focus.sparkMult) {
@@ -319,6 +340,10 @@ export function computeRelease(state: GameState, project: Project): ReleaseResul
   const adj = adjacencyMult(state.ownedUpgrades);
   newMembers = Math.round(newMembers * adj);
   buzzGain = Math.round(buzzGain * adj);
+  if (state.label) {
+    if (medium.kind === "creative") revenue = Math.round(revenue * (1 + state.label.revBonus));
+    else newMembers = Math.round(newMembers * (1 + state.label.memberBonus));
+  }
 
   let surprise: string | undefined;
   if (Math.random() < SURPRISE_CHANCE && score40 >= 18) {
@@ -386,12 +411,13 @@ export function applyTrain(c: Creative): Creative {
 // ---- New project ----
 export function newProject(
   title: string, medium: Project["medium"], vibe: Project["vibe"], staffIds: string[],
-  focus: Focus = "balanced", phases: Phases = DEFAULT_PHASES, sequelOf?: string, generation = 1
+  focus: Focus = "balanced", phases: Phases = DEFAULT_PHASES, sequelOf?: string, generation = 1,
+  mLevel = 0, vLevel = 0
 ): Project {
   const m = MEDIUMS.find((x) => x.id === medium) as Medium;
   const points = zeroPoints();
-  if (generation > 1) {
-    const head = (generation - 1) * 0.12 * m.expectedQ;
+  const head = (generation - 1) * 0.12 * m.expectedQ + (mLevel + vLevel) * 0.04 * m.expectedQ;
+  if (head > 0) {
     for (const a of AXES) points[a] = head * m.weights[a];
   }
   return {
