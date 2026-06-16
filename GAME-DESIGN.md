@@ -1,63 +1,61 @@
-# Doghouse Productions — Game Design Spine
+# Doghouse Productions — Roguelite Survival Spine
 
-The missing layer: a stated objective, win/lose, and a progression ladder that
-**gates complexity over time** (which doubles as the tutorial). Today every system
-is available at minute one → no idea where to start. This fixes that.
+**Pivot:** from "management sim with a plot" → **survival roguelite**. You don't follow
+a story to a fixed ending — you survive an escalating scene as long as you can, bust,
+bank meta-progress, and run again stronger. Less plot, more run-variety + mastery.
+Reuses ~80% of what's built; the runway pressure becomes the whole game.
 
-## The fantasy
-Build a creative studio from a 2-person scrap operation into a scene-defining
-institution — without going broke doing it.
+## A run
+- Time is divided into **Seasons** (think Balatro antes).
+- Each Season has a rising **Quota** — hit a revenue (or members) target by its end, or
+  the doors close and the run ends.
+- Constant drain: **rent** eats cash monthly. Escalation: each Season's quota climbs and
+  modifiers get nastier.
+- Between Seasons: a **draft** — pick ONE boon (a hire, a space, a trait, a run-modifier,
+  a new project type). This is where your "build" forms.
+- Survive to the final Season → you **clear the run**. Push past it for **Ascension**
+  difficulty + a higher score.
 
-## The core tension (what you optimize)
-Rent eats ~$8K/month. Grow **Members** (recurring revenue) faster than rent eats you,
-by throwing events and making work that travels — then climb a ladder of milestones
-that unlock new powers and prove you can run the house.
+## Death = progress (the roguelite engine)
+- Run ends (busted or cleared) → a **run summary** (seasons survived, peak members,
+  best score) + you bank **Acclaim** (meta-currency) scaled to performance.
+- Spend Acclaim in a **persistent unlock tree**: new starting kits, new traits in the
+  pool, new project types, new **scenarios/decks**, QoL, and **Ascension** tiers.
+  Always making progress even on a loss.
 
-## Moment-to-moment loop
-- **Events** pull Members → members pay monthly (MRR) → covers rent.
-- **Creative work** builds Buzz → buzz makes events convert better + earns cash.
-- **Contracts** = guaranteed cash injections (bridge the gap).
-- Reinvest cash/Cred → crew, training, spaces, your own label.
-- Hit milestones → unlock systems + win.
+## Per-run variety (RNG with agency)
+- Random recruit pool, trends, event deck (already exist).
+- A chosen **Scenario / Deck** at run start — the scenarios already built become roguelite
+  "characters," each a starting kit + a modifier + one unique twist.
+- **Boons/modifiers** drafted between Seasons (new).
+- Optional **seeded daily run** for a shared challenge.
 
-## Win / Lose (explicit)
-- **Lose:** cash stays negative ~8 weeks → the doors close. Telegraphed by a runway readout.
-- **Act win:** reach **$18K/month recurring** → the equity earn-in triggers (10%→20%).
-  "You made the house yours." (Already a story beat — now it's the stated goal.)
-- **Full win — Legacy:** after equity, reach **1,000 members** (or: found a label + 3
-  legendary projects) → institution status → free-play / New Game+.
+## The build (synergy = the fun)
+Your run's power = crew traits × medium/vibe synergies × spaces × label, assembled from
+random offers. Same draft-into-synergy hook as Slay the Spire / Balatro — already half-built
+via traits + the synergy grid.
 
-## Progression ladder — gates complexity AND is the tutorial
-Systems unlock as you grow. Each unlock = a story beat + a one-time "here's what this
-does" nudge (just-in-time, never front-loaded). Auto-skips on New Game+.
+## Win / score / replay
+- **Clear:** survive to the final Season (~8) or hit the $18K-revenue ante.
+- **Score:** how far + how high (members, buzz, legendary projects).
+- **Replay:** Ascension levels (harsher quotas, nastier modifiers) + unlockable decks.
 
-| Act | Unlocks when | You have | New powers unlocked | Objective shown |
-|-----|--------------|----------|---------------------|-----------------|
-| **1 · Open the doors** | start | **2 crew**, 3 event formats only | core loop: greenlight → work → release | Cover rent — reach ~230 members |
-| **2 · Make something** | MRR ≥ rent (break-even) | + creative work, casting/hire, contracts | buzz loop · grow roster to 4 | Land a contract + ship a creative piece |
-| **3 · Build a name** | reputation ≥ 20 (or first hit) | + marketing, scout, training, spaces, showcase | crew careers · upgrade the room | Score a hit (33+/40) |
-| **4 · Own it** | members ≥ 400 | + label, sequels, vendor, prestige | platform play · franchises | $18K month → equity (Act win) |
-| **Endgame · Legacy** | post-equity | everything · sandbox | New Game+ | 1,000 members → institution |
+## What changes vs today
+- **ADD:** Season/Quota antes (rising hit-or-die target) · between-Season draft/shop ·
+  Acclaim meta-currency + unlock tree · run-end summary/score · Ascension tiers.
+- **REUSE:** the whole economy, crew/traits/synergy, spaces, label, vendor (→ the draft
+  shop), scenarios (→ decks), events, randomness, prestige (→ the meta tree).
+- **TRIM:** linear story beats as the *spine* (keep as light flavor, not structure). The
+  progressive-complexity unlock folds into the run + meta tree — early runs are simple,
+  later runs richer as you unlock.
+- Start with **2 crew**; roster grows via drafts + hiring within a run.
 
-(Thresholds are first-pass — they get tuned in the balance pass.)
-
-## Always-on direction
-One **Objective** line, always visible, replacing the vague "Getting Started":
-`▸ Cover rent — 152 / 230 members`. You always know the next thing to do.
-
-## Starting-state changes
-- Crew = **2** (you + one producer), not 4. Roster grows by hiring as Act 2 opens.
-- Locked systems are hidden (not greyed) until their act → the screen starts simple.
-- Locked project types hidden in New Project; events-only in Act 1.
-
-## How this is built (on approval)
-1. `unlocks` flags in state, derived from milestones (members/MRR/rep) — data-driven, tunable.
-2. Gate UI by flag: hide dock/overlay sections + project types until unlocked.
-3. Objective system: current objective derived from act → always-on banner.
-4. Act-transition story beats (reuse the existing beat system) carry the JIT nudge.
-5. Start with 2 crew; everything else stays.
-
-## Open decisions (yours)
-1. **Win condition** — equity ($18K/mo) as Act-win + 1,000-members Legacy as full win? Or simpler (survive 5 years / single objective)?
-2. **Gating** — 4 acts by threshold (above), hard-hidden until unlocked? Or fewer acts / softer (visible-but-locked)?
-3. **Starting crew** — you + 1 generic producer (2 total)? Confirm.
+## Open forks (yours)
+1. **Structure** — Balatro-style **antes with a hard quota** each Season, hit-or-die
+   (my pick: clearest goal + tension) — *or* softer **endless survival** (just don't go
+   broke, escalating pressure, score = how long you last)?
+2. **Meta-currency** — a new **Acclaim** spent on a persistent unlock tree, with the
+   existing prestige traits as the seed? (my pick)
+3. **Run length** — ~8 Seasons to clear (≈30–60 min run)? Shorter/longer?
+4. **Tone** — keep the cozy-boutique look + light narrator flavor on top of the roguelite
+   skeleton (my pick — cozy *and* roguelite, like Spiritfarer-meets-Balatro)?
