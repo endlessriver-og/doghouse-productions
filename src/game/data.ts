@@ -293,3 +293,80 @@ export function rollRecruit(): Creative {
 }
 
 export function signingFee(c: Creative): number { return c.salary * 6 }
+
+// ---------------------------------------------------------------- Focus modes
+import type { Focus, Phases, Season } from "./types";
+export interface FocusDef {
+  id: Focus; name: string; blurb: string;
+  weeksMult: number; outMult: number; roughMult: number; sparkMult: number; buzzMult: number;
+}
+export const FOCUS: Record<Focus, FocusDef> = {
+  balanced:     { id: "balanced",     name: "Balanced",     blurb: "No bonus, no penalty.",                 weeksMult: 1.0,  outMult: 1.0,  roughMult: 1.0, sparkMult: 1.0, buzzMult: 1.0 },
+  quality:      { id: "quality",      name: "Quality",      blurb: "Slower, sharper, fewer rough edges.",   weeksMult: 1.3,  outMult: 1.18, roughMult: 0.7, sparkMult: 1.0, buzzMult: 1.0 },
+  fast:         { id: "fast",         name: "Fast",         blurb: "Ship quick. Rougher, a little louder.",  weeksMult: 0.7,  outMult: 0.85, roughMult: 1.5, sparkMult: 1.0, buzzMult: 1.05 },
+  experimental: { id: "experimental", name: "Experimental", blurb: "Swing big. More breakthroughs, more mess + buzz.", weeksMult: 1.05, outMult: 1.0, roughMult: 1.2, sparkMult: 2.2, buzzMult: 1.15 },
+};
+
+export const DEFAULT_PHASES: Phases = { concept: 0.34, build: 0.33, promo: 0.33 };
+
+// ---------------------------------------------------------------- Seasons
+export interface SeasonDef { id: Season; name: string; emoji: string; blurb: string; vibe: VibeId; kind: "event" | "creative" }
+export const SEASONS: SeasonDef[] = [
+  { id: "spring", name: "Spring", emoji: "🌱", blurb: "fresh starts — Romance + events pop",     vibe: "romance",   kind: "event" },
+  { id: "summer", name: "Summer", emoji: "🌞", blurb: "rooftop season — Hype + events surge",     vibe: "hype",      kind: "event" },
+  { id: "fall",   name: "Fall",   emoji: "🍂", blurb: "festival season — Nostalgia + releases land", vibe: "nostalgia", kind: "creative" },
+  { id: "winter", name: "Winter", emoji: "❄️", blurb: "intimate season — Wholesome + cozy events", vibe: "wholesome", kind: "event" },
+];
+export const seasonForMonth = (month: number): SeasonDef => SEASONS[month % 4];
+
+// ---------------------------------------------------------------- Scenarios
+export interface Scenario { id: string; name: string; blurb: string; cash: number; members: number; burn: number; rep: number }
+export const SCENARIOS: Scenario[] = [
+  { id: "studio",    name: "The Studio",   blurb: "The honest start. AP floats ~$8k/mo. Build the house.",         cash: 60000, members: 0,  burn: 8000, rep: 5 },
+  { id: "shoestring",name: "Shoestring",   blurb: "Hard. Half the runway, same rent. Move fast or fold.",          cash: 35000, members: 0,  burn: 8000, rep: 5 },
+  { id: "buzzy",     name: "Already Buzzing", blurb: "A small following exists. Convert it before it cools.",       cash: 55000, members: 90, burn: 8000, rep: 10 },
+  { id: "comeback",  name: "The Comeback", blurb: "Known name, empty bank. Reputation high, cash low.",            cash: 42000, members: 0,  burn: 8500, rep: 28 },
+];
+export const scenarioById = (id: string) => SCENARIOS.find((s) => s.id === id) ?? SCENARIOS[0];
+
+// ---------------------------------------------------------------- Legacy traits (prestige)
+export interface LegacyTrait { id: string; name: string; blurb: string }
+export const LEGACY_TRAITS: LegacyTrait[] = [
+  { id: "cult",     name: "Cult Following", blurb: "+25% members from every release, forever." },
+  { id: "pockets",  name: "Deep Pockets",   blurb: "Start each run with +$25k." },
+  { id: "taste",    name: "Tastemaker",     blurb: "Start with reputation 30." },
+  { id: "lean",     name: "Lean Operation", blurb: "−15% monthly burn, forever." },
+];
+
+// ---------------------------------------------------------------- Awards
+export const AWARD_CATEGORIES = ["Event of the Year", "Release of the Year", "Best Newcomer", "Scene Favorite"];
+
+// ---------------------------------------------------------------- Rivals
+export const RIVAL_NAMES = ["Warehouse 9", "Sunset Collective", "Goldline Studio", "Basement Tapes", "Neon District"];
+
+// ---------------------------------------------------------------- Narrator (The Scene Report)
+const NARRATOR: Record<string, string[]> = {
+  legendary: ["The whole city is posting about it.", "They'll be talking about this one for years.", "An undeniable moment."],
+  hit: ["The timeline approves.", "Solid. The regulars are bragging they were there.", "That one traveled."],
+  flop: ["The group chat went quiet.", "Swing and a miss. Onto the next.", "Not your moment. It happens."],
+  hire: ["Fresh blood in the building.", "The room just got deeper.", "New energy on the roster."],
+  broke: ["Books are looking thin. Land a paying gig.", "AP keeps glancing at the bank balance.", "Tighten up — runway's short."],
+  month: ["Another month survives.", "Rent paid, lights on.", "The clock keeps ticking."],
+};
+export function narratorLine(kind: string): string {
+  const arr = NARRATOR[kind] ?? NARRATOR.month;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ---------------------------------------------------------------- Goals (dual-track)
+export interface GoalTemplate { id: string; label: string; reward: number; test: (s: import("./types").GameState) => boolean }
+export const GOAL_TEMPLATES: GoalTemplate[] = [
+  { id: "members150", label: "Reach 150 members", reward: 2000, test: (s) => s.members >= 150 },
+  { id: "members300", label: "Reach 300 members", reward: 4000, test: (s) => s.members >= 300 },
+  { id: "ship3",      label: "Ship 3 projects",   reward: 1500, test: (s) => s.totalReleases >= 3 },
+  { id: "ship8",      label: "Ship 8 projects",   reward: 3000, test: (s) => s.totalReleases >= 8 },
+  { id: "hit33",      label: "Score 33+ on a project", reward: 2500, test: (s) => s.bestScore >= 33 },
+  { id: "space2",     label: "Build 2 studio spaces", reward: 2000, test: (s) => s.ownedUpgrades.length >= 2 },
+  { id: "breakeven",  label: "Cover rent with memberships", reward: 3000, test: (s) => s.members * 35 >= s.burn },
+  { id: "crew6",      label: "Grow the crew to 6", reward: 2000, test: (s) => s.staff.length >= 6 },
+];

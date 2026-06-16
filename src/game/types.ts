@@ -93,16 +93,26 @@ export interface Upgrade {
 
 export type Phase = "idle" | "production" | "polish";
 
+/** Strategic posture chosen per project (GDS direction modes). */
+export type Focus = "balanced" | "quality" | "fast" | "experimental";
+/** Effort split across the three production phases (sums to ~1). */
+export interface Phases { concept: number; build: number; promo: number }
+
 export interface Project {
   title: string;
   medium: MediumId;
   vibe: VibeId;
+  focus: Focus;
+  phases: Phases;
   weeksTotal: number;
   weeksElapsed: number;
   points: AxisPoints;
   hype: number;       // project buzz built during production
   roughEdges: number;
   staffIds: string[];
+  spikeUsed: boolean;     // mid-project risk gamble consumed
+  sequelOf?: string;      // title of the project this is a sequel to
+  generation: number;     // 1 = original, 2+ = sequel depth
 }
 
 export interface ReleaseResult {
@@ -117,7 +127,42 @@ export interface ReleaseResult {
   revenue: number;
   legendary: boolean;
   week: number;
+  phaseMatch: number;     // 0..1 how well phases fit the medium
+  surprise?: string;      // variable-reward flavor when it fires
+  generation: number;
 }
+
+/** A shipped project retained for sequels + residual income. */
+export interface CatalogItem {
+  title: string;
+  medium: MediumId;
+  vibe: VibeId;
+  score40: number;
+  generation: number;
+  residual: number;       // $/month passive while it has legs
+  monthsLeft: number;     // residual decays to 0
+}
+
+/** A short-term objective (dual-track goals). */
+export interface Goal {
+  id: string;
+  label: string;
+  reward: number;         // cash bonus on completion
+  done: boolean;
+}
+
+export interface Rival {
+  name: string;
+  members: number;
+  rep: number;
+  lastTitle: string;
+  lastScore: number;
+}
+
+export interface AwardCategory { name: string; winner: string; youWon: boolean; nominee: string }
+export interface AwardResult { year: number; categories: AwardCategory[] }
+
+export type Season = "spring" | "summer" | "fall" | "winter";
 
 export interface Trend { medium: MediumId; vibe: VibeId; monthsLeft: number }
 
@@ -169,6 +214,17 @@ export interface GameState {
   activeEventId: string | null;
   negativeWeeks: number;
   gameOver: boolean;
+  // catalog + meta systems
+  catalog: CatalogItem[];
+  goals: Goal[];
+  rivals: Rival[];
+  narrator: string | null;     // wry in-world reaction line
+  trendPreviewed: boolean;      // bought next-trend foresight this cycle
+  awardsPending: AwardResult | null;
+  lastAwardYear: number;
+  legacyRun: number;            // New Game+ count
+  legacyTraits: string[];       // permanent prestige bonuses
+  scenarioId: string;
   // stats
   totalReleases: number;
   bestScore: number;

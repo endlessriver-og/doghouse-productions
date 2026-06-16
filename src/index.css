@@ -306,3 +306,59 @@ h1, h2 { margin: 0; text-transform: uppercase; letter-spacing: 1px; }
   z-index: 60; animation: toast-in .3s ease-out; max-width: 90vw; text-align: center;
 }
 @keyframes toast-in { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+/* ======================= Depth pass (v3) ======================= */
+/* Scout button in trend bar */
+.scout-btn {
+  float: right; font-family: inherit; font-size: 11px; font-weight: bold; cursor: pointer;
+  border: 2px solid var(--edge); background: var(--gold); padding: 2px 8px; margin-top: -2px;
+}
+.scout-btn:disabled { opacity: .5; cursor: default; background: var(--bg2); }
+
+/* Narrator ticker */
+.narrator {
+  background: var(--edge); color: var(--bg); padding: 7px 14px; margin-bottom: 16px;
+  font-style: italic; font-size: 13px; border: 2px solid var(--edge); animation: toast-in .3s ease-out;
+}
+.narrator-by { font-style: normal; opacity: .6; font-size: 11px; }
+
+/* Phase sliders */
+.slider-row { display: grid; grid-template-columns: 64px 1fr 38px; align-items: center; gap: 8px; margin-bottom: 4px; }
+.slider-label { font-size: 11px; text-transform: uppercase; }
+.slider-val { font-size: 12px; font-weight: bold; text-align: right; }
+input[type="range"] { -webkit-appearance: none; appearance: none; height: 8px; background: var(--bg2); border: 2px solid var(--edge); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border: 2px solid var(--edge); cursor: pointer; }
+.projected { display: flex; align-items: center; justify-content: space-between; border: 2px solid var(--edge); background: var(--bg2); padding: 6px 10px; margin: 8px 0; }
+.proj-band { font-size: 20px; font-weight: bold; }
+
+/* Sequel row */
+.sequel-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 10px 16px 0; }
+
+/* Goals strip */
+.goals-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--panel); border: 2px solid var(--edge); box-shadow: var(--shadow); padding: 8px 12px; }
+.goal-chip { font-size: 11px; border: 2px solid var(--edge); background: var(--bg2); padding: 3px 8px; }
+.goal-done { background: #e3efe5; color: var(--good); text-decoration: line-through; }
+
+/* Catalog + rivals */
+.catalog, .rivals { display: flex; flex-direction: column; gap: 4px; }
+.cat-row, .rival-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 6px; background: var(--bg2); border-left: 3px solid var(--gold); }
+.rival-row { border-left-color: var(--violet); }
+.cat-title, .rival-name { font-weight: bold; }
+
+/* Awards */
+.awards-list { margin: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.award-row { display: flex; justify-content: space-between; border: 2px solid var(--edge); background: var(--bg2); padding: 7px 10px; font-size: 13px; }
+.award-win { background: var(--gold); }
+.award-cat { text-transform: uppercase; font-size: 11px; }
+.award-winner { font-weight: bold; }
+
+/* Legacy / prestige */
+.legacy-list { margin: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.legacy-card { font-family: inherit; text-align: left; cursor: pointer; border: 2px solid var(--edge); background: var(--bg2); box-shadow: 2px 2px 0 var(--edge); padding: 10px 12px; }
+.legacy-card:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
+.legacy-have { opacity: .5; cursor: default; }
+.legacy-name { display: block; font-weight: bold; font-size: 14px; }
+.legacy-blurb { display: block; font-size: 11px; color: var(--ink-soft); }
+
+/* Surprise line in reveal */
+.surprise-line { text-align: center; font-size: 13px; color: var(--accent-d); font-weight: bold; margin: 0 16px 8px; }

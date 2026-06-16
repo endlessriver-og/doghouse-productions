@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { eraForYear, mediumById, signingFee, vibeById } from "./game/data";
-import { mrrOf, monthOf, trainCost, yearOf } from "./game/logic";
+import { FOCUS, eraForYear, mediumById, signingFee, vibeById } from "./game/data";
+import { estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
 import { useGame } from "./game/store";
+import { AwardsModal } from "./ui/AwardsModal";
 import { EventModal } from "./ui/EventModal";
 import { NewProjectModal } from "./ui/NewProjectModal";
+import { PrestigeModal } from "./ui/PrestigeModal";
 import { ScoreReveal } from "./ui/ScoreReveal";
 import { StoryModal } from "./ui/StoryModal";
 import { UpgradesPanel } from "./ui/UpgradesPanel";
@@ -20,28 +22,37 @@ const AXES = [
 export function App() {
   const s = useGame();
   const [showNew, setShowNew] = useState(false);
+  const [showPrestige, setShowPrestige] = useState(false);
 
   const year = yearOf(s.week);
   const era = eraForYear(year);
+  const season = seasonOf(s.week);
   const mrr = mrrOf(s);
+  const residual = residualOf(s);
   const cash = useCountUp(s.cash);
   const members = useCountUp(s.members);
   const buzz = useCountUp(Math.round(s.buzz));
 
-  // auto-clear the transient banner
   useEffect(() => {
     if (!s.banner) return;
     const t = window.setTimeout(() => useGame.getState().clearBanner(), 3600);
     return () => clearTimeout(t);
   }, [s.banner]);
+  useEffect(() => {
+    if (!s.narrator) return;
+    const t = window.setTimeout(() => useGame.getState().clearNarrator(), 5000);
+    return () => clearTimeout(t);
+  }, [s.narrator]);
 
-  // Release reveal must out-rank story beats — a release that crosses a milestone
-  // should show the animated score first, then the story card on dismiss.
   const modal = s.gameOver ? "over"
     : s.lastRelease ? "release"
+    : s.awardsPending ? "awards"
     : s.storyQueue.length ? "story"
     : s.activeEventId ? "event"
+    : showPrestige ? "prestige"
     : showNew && !s.project ? "new" : null;
+
+  const canPrestige = s.equityTriggered || s.members >= 600 || s.legacyRun > 0;
 
   return (
     <div className="app">
@@ -49,31 +60,39 @@ export function App() {
         <div className="brand">
           <span className="logo">🐶</span>
           <div>
-            <div className="brand-name">{s.studioName}</div>
-            <div className="brand-sub">Y{year + 1} · Month {monthOf(s.week) + 1} · {era.name} era</div>
+            <div className="brand-name">{s.studioName}{s.legacyRun > 0 ? ` · Run ${s.legacyRun + 1}` : ""}</div>
+            <div className="brand-sub">Y{year + 1} · M{monthOf(s.week) % 12 + 1} {season.emoji} · {era.name} era</div>
           </div>
         </div>
         <div className="stats">
           <Stat label="Cash" value={money(cash)} warn={s.cash < 0} />
           <Stat label="Members" value={compact(members)} accent />
           <Stat label="Buzz" value={compact(buzz)} />
-          <MrrStat mrr={mrr} burn={s.burn} />
+          <MrrStat mrr={mrr + residual} burn={s.burn} residual={residual} />
           <Stat label="Rep" value={`${s.reputation}`} />
         </div>
       </header>
 
-      <div className={`trend-bar ${ (s.project && (s.trend.medium === s.project.medium || s.trend.vibe === s.project.vibe)) ? "trend-live" : "" }`}>
-        🔥 Hot right now: <b>{mediumById(s.trend.medium).name}</b> × <b>{vibeById(s.trend.vibe).name}</b>
-        <span className="muted"> · matching projects get a boost · {s.trend.monthsLeft}mo left</span>
+      <div className={`trend-bar ${s.project && (s.trend.medium === s.project.medium || s.trend.vibe === s.project.vibe) ? "trend-live" : ""}`}>
+        🔥 Hot: <b>{mediumById(s.trend.medium).name}</b> × <b>{vibeById(s.trend.vibe).name}</b>
+        <span className="muted"> · {s.trend.monthsLeft}mo · {season.emoji} {season.blurb}</span>
+        <button className="scout-btn" disabled={s.trendPreviewed || s.cash < 1200} onClick={() => useGame.getState().previewTrend()}>
+          {s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}
+        </button>
       </div>
+
+      {s.narrator && <div className="narrator">“{s.narrator}” <span className="narrator-by">— the scene report</span></div>}
 
       <main className="layout">
         <div className="col-main">
-          {s.project ? <ProjectView /> : <IdleView onNew={() => setShowNew(true)} />}
+          {s.project ? <ProjectView /> : <IdleView onNew={() => setShowNew(true)} canPrestige={canPrestige} onPrestige={() => setShowPrestige(true)} />}
+          <GoalsStrip />
           <StaffPanel />
         </div>
         <div className="col-side">
           <UpgradesPanel />
+          {s.catalog.length > 0 && <CatalogPanel />}
+          <RivalsPanel />
           <RecruitPanel />
           <LogPanel />
         </div>
@@ -83,6 +102,8 @@ export function App() {
       {modal === "story" && <StoryModal />}
       {modal === "event" && <EventModal />}
       {modal === "release" && <ScoreReveal />}
+      {modal === "awards" && <AwardsModal />}
+      {modal === "prestige" && <PrestigeModal onClose={() => setShowPrestige(false)} />}
       {modal === "over" && <GameOverModal />}
 
       {s.banner && <div className="banner-toast">{s.banner}</div>}
@@ -91,26 +112,20 @@ export function App() {
 }
 
 function Stat({ label, value, warn, accent }: { label: string; value: string; warn?: boolean; accent?: boolean }) {
-  return (
-    <div className={`stat ${warn ? "stat-warn" : ""} ${accent ? "stat-accent" : ""}`}>
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-    </div>
-  );
+  return <div className={`stat ${warn ? "stat-warn" : ""} ${accent ? "stat-accent" : ""}`}><div className="stat-label">{label}</div><div className="stat-value">{value}</div></div>;
 }
-
-function MrrStat({ mrr, burn }: { mrr: number; burn: number }) {
+function MrrStat({ mrr, burn, residual }: { mrr: number; burn: number; residual: number }) {
   const ok = mrr >= burn;
   return (
-    <div className={`stat stat-mrr ${ok ? "stat-ok" : "stat-bad"}`} title="Monthly membership revenue vs operating burn">
-      <div className="stat-label">MRR / Burn</div>
+    <div className={`stat stat-mrr ${ok ? "stat-ok" : "stat-bad"}`} title={`Monthly revenue (incl. $${residual.toLocaleString()} residuals) vs $${burn.toLocaleString()} burn`}>
+      <div className="stat-label">Rev / Burn</div>
       <div className="stat-value sm">{money(mrr)}<span className="slash">/</span>{money(burn)}</div>
     </div>
   );
 }
 
 // ---------------- Idle ----------------
-function IdleView({ onNew }: { onNew: () => void }) {
+function IdleView({ onNew, canPrestige, onPrestige }: { onNew: () => void; canPrestige: boolean; onPrestige: () => void }) {
   const advanceWeek = useGame((s) => s.advanceWeek);
   const legendary = useGame((s) => s.legendary);
   const totalReleases = useGame((s) => s.totalReleases);
@@ -120,20 +135,14 @@ function IdleView({ onNew }: { onNew: () => void }) {
         <p className="muted">No project running. Throw an event to pull members, or make something to build buzz.</p>
         <div className="row">
           <Button variant="primary" onClick={onNew}>＋ New Project</Button>
-          <Button variant="ghost" onClick={advanceWeek} title="Pass a week (salaries paid, members recur monthly)">Skip Week ▸</Button>
+          <Button variant="ghost" onClick={advanceWeek} title="Pass a week">Skip Week ▸</Button>
+          {canPrestige && <Button variant="ghost" onClick={onPrestige} title="Reset for a permanent bonus">↻ Legacy Reset</Button>}
         </div>
-        <div className="idle-stats">
-          <span className="muted">{totalReleases} shipped · {legendary.length} legendary</span>
-        </div>
+        <div className="idle-stats"><span className="muted">{totalReleases} shipped · {legendary.length} legendary</span></div>
         {legendary.length > 0 && (
           <div className="legend-wall">
             <div className="field-label">🏆 Legendary</div>
-            {legendary.map((r, i) => (
-              <div key={i} className="legend-row">
-                <span>{r.title}</span>
-                <span className="muted">{mediumById(r.medium).name} · {r.score40}/40</span>
-              </div>
-            ))}
+            {legendary.map((r, i) => <div key={i} className="legend-row"><span>{r.title}</span><span className="muted">{mediumById(r.medium).name} · {r.score40}/40</span></div>)}
           </div>
         )}
       </div>
@@ -147,35 +156,39 @@ function ProjectView() {
   const p = s.project!;
   const advanceWeek = useGame((a) => a.advanceWeek);
   const release = useGame((a) => a.release);
+  const takeSpike = useGame((a) => a.takeSpike);
   const m = mediumById(p.medium);
   const maxPt = m.expectedQ * 1.4;
   const crew = s.staff.filter((c) => p.staffIds.includes(c.id));
+  const fit = Math.round(phaseMatch(p.phases, phaseIdeal(m)) * 100);
+  const band = estimateScore(crew, p.medium, p.vibe, p.phases, p.focus, s.reputation);
+  const spikeReady = s.phase === "production" && !p.spikeUsed && p.weeksElapsed >= 1;
 
   return (
-    <Panel title={`▸ ${p.title}`}
+    <Panel title={`▸ ${p.title}${p.generation > 1 ? ` ${"I".repeat(p.generation)}` : ""}`}
       right={<span className="muted">{m.name} · {vibeById(p.vibe).name} <SynergyBadge medium={p.medium} vibe={p.vibe} /></span>}>
       <div className="proj">
         <div className="proj-phase">
           <span className={`kind-pill kind-${m.kind}`}>{m.kind === "event" ? "EVENT" : "CREATIVE"}</span>
           <span className={`phase-pill phase-${s.phase}`}>{s.phase === "polish" ? "POLISH" : "PRODUCTION"}</span>
-          <span className="muted">Wk {Math.min(p.weeksElapsed, p.weeksTotal)}/{p.weeksTotal}</span>
+          <span className="muted">{FOCUS[p.focus].name} · fit {fit}% · proj {band ? `${band.low}–${band.high}` : "—"}</span>
           <div className="grow"><Bar value={p.weeksElapsed} max={p.weeksTotal} color="#2b2118" /></div>
+          <span className="muted">{Math.min(p.weeksElapsed, p.weeksTotal)}/{p.weeksTotal}</span>
         </div>
 
         <div className="axes">
-          {AXES.map((a) => (
-            <AxisRow key={a.key} label={a.label} value={p.points[a.key]} max={maxPt} color={a.color} />
-          ))}
+          {AXES.map((a) => <AxisRow key={a.key} label={a.label} value={p.points[a.key]} max={maxPt} color={a.color} />)}
         </div>
 
         <div className="proj-meta">
-          <span>🔥 Buzz building <b>{Math.round(p.hype)}</b></span>
-          <span>🩹 Rough edges <b>{Math.round(p.roughEdges)}</b></span>
+          <span>🔥 Buzz <b>{Math.round(p.hype)}</b></span>
+          <span>🩹 Rough <b>{Math.round(p.roughEdges)}</b></span>
           <span>👥 {crew.map((c) => c.name.split(" ")[0]).join(", ")}</span>
         </div>
 
         <div className="row">
           {s.phase === "production" && <Button variant="primary" onClick={advanceWeek}>Work a Week ▸</Button>}
+          {spikeReady && <Button onClick={takeSpike} title="Gamble: ~55% big breakthrough, else rough edges + buzz hit">⚡ Risk Spike</Button>}
           {s.phase === "polish" && (
             <>
               <Button onClick={advanceWeek} title="Reduce rough edges">Polish 1 Wk</Button>
@@ -187,15 +200,56 @@ function ProjectView() {
     </Panel>
   );
 }
-
 function AxisRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   const v = useCountUp(Math.round(value), 400);
+  return <div className="axis"><span className="axis-label">{label}</span><Bar value={value} max={max} color={color} /><span className="axis-num">{v}</span></div>;
+}
+
+// ---------------- Goals ----------------
+function GoalsStrip() {
+  const goals = useGame((s) => s.goals);
+  if (goals.length === 0) return null;
   return (
-    <div className="axis">
-      <span className="axis-label">{label}</span>
-      <Bar value={value} max={max} color={color} />
-      <span className="axis-num">{v}</span>
+    <div className="goals-strip">
+      <span className="field-label" style={{ margin: 0 }}>🎯 Goals</span>
+      {goals.map((g) => (
+        <span key={g.id} className={`goal-chip ${g.done ? "goal-done" : ""}`}>{g.done ? "✓ " : ""}{g.label} <b>+{money(g.reward)}</b></span>
+      ))}
     </div>
+  );
+}
+
+// ---------------- Catalog ----------------
+function CatalogPanel() {
+  const catalog = useGame((s) => s.catalog);
+  return (
+    <Panel title="Catalog · residuals">
+      <div className="catalog">
+        {catalog.map((c) => (
+          <div key={c.title} className="cat-row">
+            <span className="cat-title">{c.title}{c.generation > 1 ? ` ${"I".repeat(c.generation)}` : ""}</span>
+            <span className="muted">{c.score40}/40 · {money(c.residual)}/mo</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+// ---------------- Rivals ----------------
+function RivalsPanel() {
+  const rivals = useGame((s) => s.rivals);
+  return (
+    <Panel title="Rival Studios">
+      <div className="rivals">
+        {rivals.map((r) => (
+          <div key={r.name} className="rival-row">
+            <span className="rival-name">{r.name}</span>
+            <span className="muted">{compact(r.members)} mbrs{r.lastScore ? ` · "${r.lastTitle}" ${r.lastScore}/40` : ""}</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
   );
 }
 
@@ -211,15 +265,10 @@ function StaffPanel() {
           const cost = trainCost(c);
           return (
             <div key={c.id} className={`creative-card ${c.assigned ? "card-busy" : ""}`}>
-              <div className="cc-head">
-                <span className="cc-name">{c.name}</span>
-                <span className="cc-role">{roleName(c.role)} · Lv{c.level}</span>
-              </div>
+              <div className="cc-head"><span className="cc-name">{c.name}</span><span className="cc-role">{roleName(c.role)} · Lv{c.level}</span></div>
               <TraitChip trait={c.trait} />
               <div className="cc-stats">
-                <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} />
-                <Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} />
-                <Mini label="HUS" v={c.stats.hustle} />
+                <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} />
               </div>
               <div className="cc-foot">
                 <span className="muted">⚡{c.energy} · {money(c.salary)}/wk</span>
@@ -249,16 +298,9 @@ function RecruitPanel() {
           const fee = signingFee(c);
           return (
             <div key={c.id} className="recruit-card">
-              <div className="rc-top">
-                <span className="cc-name">{c.name}</span>
-                <span className="cc-role">{roleName(c.role)}</span>
-              </div>
+              <div className="rc-top"><span className="cc-name">{c.name}</span><span className="cc-role">{roleName(c.role)}</span></div>
               <TraitChip trait={c.trait} />
-              <div className="cc-stats sm">
-                <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} />
-                <Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} />
-                <Mini label="HUS" v={c.stats.hustle} />
-              </div>
+              <div className="cc-stats sm"><Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} /></div>
               <Button variant="primary" disabled={cash < fee} onClick={() => hire(c.id)}>Sign {money(fee)}</Button>
             </div>
           );
@@ -274,9 +316,7 @@ function LogPanel() {
   return (
     <Panel title="Studio Log">
       <div className="log">
-        {[...logEntries].reverse().map((e, i) => (
-          <div key={i} className={`log-line log-${e.kind}`}><span className="log-wk">w{e.week}</span> {e.text}</div>
-        ))}
+        {[...logEntries].reverse().map((e, i) => <div key={i} className={`log-line log-${e.kind}`}><span className="log-wk">w{e.week}</span> {e.text}</div>)}
       </div>
     </Panel>
   );
@@ -291,11 +331,7 @@ function GameOverModal() {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <header className="modal-head"><h2>Studio Closed 🐶</h2></header>
         <p className="muted center">Doghouse Productions ran out of road in Year {yearOf(s.week) + 1}.</p>
-        <div className="payoff">
-          <span>{compact(s.members)} members</span>
-          <span>{s.legendary.length} legendary</span>
-          <span>best {s.bestScore}/40</span>
-        </div>
+        <div className="payoff"><span>{compact(s.members)} members</span><span>{s.legendary.length} legendary</span><span>best {s.bestScore}/40</span></div>
         <div className="row center"><Button variant="primary" onClick={reset}>New Studio ▸</Button></div>
       </div>
     </div>

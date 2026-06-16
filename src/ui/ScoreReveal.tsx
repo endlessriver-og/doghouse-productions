@@ -37,7 +37,7 @@ export function ScoreReveal() {
       <div className="modal reveal" onClick={(e) => e.stopPropagation()}>
         <header className="modal-head">
           <h2>{r.title}</h2>
-          <span className="muted">{r.kind === "event" ? "EVENT" : "RELEASE"}</span>
+          <span className="muted">{r.kind === "event" ? "EVENT" : "RELEASE"}{r.generation > 1 ? ` · SEQUEL ${"I".repeat(r.generation)}` : ""}</span>
         </header>
 
         <div className="critics">
@@ -59,6 +59,7 @@ export function ScoreReveal() {
               <span>+{r.buzzGain.toLocaleString()} buzz</span>
               <span className="pay-good">${r.revenue.toLocaleString()}</span>
             </div>
+            {r.surprise && <div className="surprise-line">🎁 {r.surprise}</div>}
             <div className="row center">
               <Button variant="primary" onClick={dismiss}>Onward ▸</Button>
             </div>
