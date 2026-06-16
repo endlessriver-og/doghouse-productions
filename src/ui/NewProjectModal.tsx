@@ -5,6 +5,7 @@ import { useGame } from "../game/store";
 import type { Focus, MediumId, Phases, ProjectKind, VibeId } from "../game/types";
 import { Button, SynergyBadge, TraitChip, money, roleName } from "./components";
 import { Icon } from "./Icon";
+import { flashScreen } from "./juice";
 
 const FOCI: Focus[] = ["balanced", "quality", "fast", "experimental"];
 
@@ -135,6 +136,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
           </span>
           {!canAfford && <span className="warn">Need {money(m.budget)}.</span>}
           <Button variant="primary" disabled={!canStart} onClick={() => {
+            flashScreen("#fff7df");
             startProject(title, medium, vibe, picked, focus, phases, sequelOf, seqItem ? seqItem.generation + 1 : 1);
             onClose();
           }}>Greenlight ▸</Button>

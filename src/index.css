@@ -498,3 +498,18 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .mute-btn { cursor: pointer; border: 2px solid var(--edge); background: var(--bg2); color: var(--ink); padding: 4px 7px; display: grid; place-items: center; box-shadow: 2px 2px 0 var(--edge); align-self: stretch; }
 .mute-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
 .mute-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+
+/* --- action feedback / juice --- */
+.stat { position: relative; overflow: visible; }
+.stat-value.live { animation: stat-bump .38s ease-out; }
+@keyframes stat-bump { 0% { transform: scale(1); } 38% { transform: scale(1.16); } 100% { transform: scale(1); } }
+.floater { position: absolute; right: 8px; top: 0; font-size: 12px; font-weight: bold; pointer-events: none; z-index: 8; animation: float-up .9s ease-out forwards; text-shadow: 1px 1px 0 rgba(0,0,0,.25); white-space: nowrap; }
+.floater.up { color: var(--good); }
+.floater.down { color: var(--bad); }
+@keyframes float-up { 0% { opacity: 0; transform: translateY(6px); } 18% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px); } }
+.axis { position: relative; }
+.axis-float { right: 44px; top: -2px; }
+
+.screen-flash { position: fixed; inset: 0; opacity: .45; pointer-events: none; z-index: 200; transition: opacity .2s ease-out; mix-blend-mode: screen; }
+.burst-bit { position: fixed; width: 7px; height: 7px; border: 1px solid rgba(0,0,0,.3); pointer-events: none; z-index: 150; animation: burst-fly .62s ease-out forwards; }
+@keyframes burst-fly { to { transform: translate(var(--bx), var(--by)) scale(.4) rotate(90deg); opacity: 0; } }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { ROLES, TRAITS, mediumById, synergyTier, vibeById } from "../game/data";
 import type { MediumId, RoleId, SynergyTier, TraitId, VibeId } from "../game/types";
 import { sfx } from "./sound";
@@ -29,13 +29,13 @@ export function Button({
   children, onClick, variant = "default", disabled, title,
 }: {
   children: ReactNode;
-  onClick?: () => void;
+  onClick?: (e: MouseEvent) => void;
   variant?: "default" | "primary" | "ghost";
   disabled?: boolean;
   title?: string;
 }) {
   return (
-    <button className={`btn btn-${variant}`} onClick={onClick ? () => { sfx.click(); onClick(); } : undefined} disabled={disabled} title={title}>
+    <button className={`btn btn-${variant}`} onClick={onClick ? (e) => { sfx.click(); onClick(e); } : undefined} disabled={disabled} title={title}>
       {children}
     </button>
   );

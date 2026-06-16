@@ -16,7 +16,7 @@ import { UpgradesPanel } from "./ui/UpgradesPanel";
 import { VendorModal } from "./ui/VendorModal";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
 import { Icon } from "./ui/Icon";
-import { useCountUp } from "./ui/juice";
+import { burstFromEvent, flashScreen, useCountUp, useDelta } from "./ui/juice";
 import { isMuted, sfx, toggleMute } from "./ui/sound";
 
 const AXES = [
@@ -42,9 +42,6 @@ export function App() {
   const sceneMood = ({ spring: "dusk", summer: "midday", fall: "dusk", winter: "night" } as const)[season.id];
   const mrr = mrrOf(s);
   const residual = residualOf(s);
-  const cash = useCountUp(s.cash);
-  const members = useCountUp(s.members);
-  const buzz = useCountUp(Math.round(s.buzz));
 
   useEffect(() => {
     if (!s.banner) return;
@@ -105,12 +102,12 @@ export function App() {
           </div>
         </div>
         <div className="stats">
-          <Stat label="Cash" value={money(cash)} warn={s.cash < 0} />
-          <Stat label="Members" value={compact(members)} accent />
-          <Stat label="Buzz" value={compact(buzz)} />
-          <Stat label="Cred" value={`${s.cred}◆`} />
+          <ResourceStat label="Cash" value={s.cash} fmt={money} warn={s.cash < 0} />
+          <ResourceStat label="Members" value={s.members} fmt={compact} accent />
+          <ResourceStat label="Buzz" value={Math.round(s.buzz)} fmt={compact} />
+          <ResourceStat label="Cred" value={s.cred} fmt={(n) => `${n}◆`} />
           <MrrStat mrr={mrr + residual} burn={s.burn} residual={residual} />
-          <Stat label="Rep" value={`${s.reputation}`} />
+          <ResourceStat label="Rep" value={s.reputation} fmt={(n) => `${n}`} />
           <button className="mute-btn" onClick={() => setMuted(toggleMute())} title="Sound on/off"><Icon name={muted ? "mute" : "sound"} size={16} /></button>
         </div>
       </header>
@@ -154,7 +151,7 @@ export function App() {
               </>
             ) : (
               <>
-                {spikeReady && <Button onClick={s.takeSpike} title="Gamble for a breakthrough"><Icon name="spike" size={13} /> Spike</Button>}
+                {spikeReady && <Button onClick={() => { flashScreen("#ffd86b"); s.takeSpike(); }} title="Gamble for a breakthrough"><Icon name="spike" size={13} /> Spike</Button>}
                 <Button variant="primary" onClick={s.advanceWeek}>Work a Week ▸</Button>
               </>
             )
@@ -221,8 +218,17 @@ function SceneControls({ canPrestige, onPrestige }: { canPrestige: boolean; onPr
   );
 }
 
-function Stat({ label, value, warn, accent }: { label: string; value: string; warn?: boolean; accent?: boolean }) {
-  return <div className={`stat ${warn ? "stat-warn" : ""} ${accent ? "stat-accent" : ""}`}><div className="stat-label">{label}</div><div className="stat-value">{value}</div></div>;
+// auto-animating resource: count-up + bump + floating ±delta on every change
+function ResourceStat({ label, value, fmt, warn, accent }: { label: string; value: number; fmt: (n: number) => string; warn?: boolean; accent?: boolean }) {
+  const disp = useCountUp(value);
+  const { delta, nonce } = useDelta(value);
+  return (
+    <div className={`stat ${warn ? "stat-warn" : ""} ${accent ? "stat-accent" : ""}`}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value live" key={`v${nonce}`}>{fmt(disp)}</div>
+      {nonce > 0 && <span key={`f${nonce}`} className={`floater ${delta > 0 ? "up" : "down"}`}>{delta > 0 ? "+" : "−"}{fmt(Math.abs(delta))}</span>}
+    </div>
+  );
 }
 function MrrStat({ mrr, burn, residual }: { mrr: number; burn: number; residual: number }) {
   const ok = mrr >= burn;
@@ -322,7 +328,7 @@ function ProjectView() {
 
         <div className="row">
           {s.phase === "production" && <Button variant="primary" onClick={advanceWeek}>Work a Week ▸</Button>}
-          {spikeReady && <Button onClick={takeSpike} title="Gamble: ~55% big breakthrough, else rough edges + buzz hit"><Icon name="spike" size={13} /> Risk Spike</Button>}
+          {spikeReady && <Button onClick={() => { flashScreen("#ffd86b"); takeSpike(); }} title="Gamble: ~55% big breakthrough, else rough edges + buzz hit"><Icon name="spike" size={13} /> Risk Spike</Button>}
           {s.phase === "polish" && (
             <>
               <Button onClick={advanceWeek} title="Reduce rough edges">Polish 1 Wk</Button>
@@ -335,8 +341,17 @@ function ProjectView() {
   );
 }
 function AxisRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const v = useCountUp(Math.round(value), 400);
-  return <div className="axis"><span className="axis-label">{label}</span><Bar value={value} max={max} color={color} /><span className="axis-num">{v}</span></div>;
+  const rounded = Math.round(value);
+  const v = useCountUp(rounded, 400);
+  const { delta, nonce } = useDelta(rounded);
+  return (
+    <div className="axis">
+      <span className="axis-label">{label}</span>
+      <Bar value={value} max={max} color={color} />
+      <span className="axis-num">{v}</span>
+      {delta > 0 && <span key={nonce} className="floater up axis-float">+{delta}</span>}
+    </div>
+  );
 }
 
 // ---------------- Goals ----------------
@@ -433,7 +448,7 @@ function StaffPanel() {
               <div className="cc-foot">
                 <span className="muted">energy {c.energy} · {money(c.salary)}/wk</span>
                 <div className="row" style={{ gap: 4 }}>
-                  {promoteReady && <Button variant="ghost" disabled={cred < promoteCost} onClick={() => promote(c.id)} title="Career promotion (Cred)">↑{promoteCost}◆</Button>}
+                  {promoteReady && <Button variant="ghost" disabled={cred < promoteCost} onClick={(e) => { promote(c.id); burstFromEvent(e); }} title="Career promotion (Cred)">↑{promoteCost}◆</Button>}
                   <Button variant="ghost" disabled={cash < cost} onClick={() => train(c.id)} title="Boost stats">Train {money(cost)}</Button>
                 </div>
               </div>
@@ -467,7 +482,7 @@ function RecruitPanel() {
               <div className="rc-top"><span className="cc-name">{c.name}</span><span className="cc-role">{roleName(c.role)}</span></div>
               <TraitChip trait={c.trait} />
               <div className="cc-stats sm"><Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} /></div>
-              <Button variant="primary" disabled={cash < fee || full} onClick={() => hire(c.id)}>{full ? "Full" : `Sign ${money(fee)}`}</Button>
+              <Button variant="primary" disabled={cash < fee || full} onClick={(e) => { hire(c.id); burstFromEvent(e); }}>{full ? "Full" : `Sign ${money(fee)}`}</Button>
             </div>
           );
         })}
