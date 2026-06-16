@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { FOCUS, careerTitle, eraForYear, mediumById, signingFee, vibeById } from "./game/data";
 import { canPromote, crewCapOf, estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, promoteCredCost, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
 import { useGame } from "./game/store";
@@ -24,8 +24,11 @@ const AXES = [
   { key: "story", label: "Story", color: "#e3a008" },
 ] as const;
 
+type View = "make" | "crew" | "biz" | "scene";
+
 export function App() {
   const s = useGame();
+  const [view, setView] = useState<View | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [showPrestige, setShowPrestige] = useState(false);
 
@@ -62,10 +65,11 @@ export function App() {
     : showNew && !s.project ? "new" : null;
 
   const canPrestige = s.equityTriggered || s.members >= 600 || s.legacyRun > 0;
+  const spikeReady = !!s.project && s.phase === "production" && !s.project.spikeUsed && s.project.weeksElapsed >= 1;
 
   return (
-    <div className="app">
-      <header className="topbar">
+    <div className="game">
+      <header className="hud">
         <div className="brand">
           <span className="logo">🐶</span>
           <div>
@@ -83,36 +87,54 @@ export function App() {
         </div>
       </header>
 
-      <div className={`trend-bar ${s.project && (s.trend.medium === s.project.medium || s.trend.vibe === s.project.vibe) ? "trend-live" : ""}`}>
-        🔥 Hot: <b>{mediumById(s.trend.medium).name}</b> × <b>{vibeById(s.trend.vibe).name}</b>
-        <span className="muted"> · {s.trend.monthsLeft}mo · {season.emoji} {season.blurb}</span>
-        <button className="scout-btn" disabled={s.trendPreviewed || s.cash < 1200} onClick={() => useGame.getState().previewTrend()}>
-          {s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}
-        </button>
+      <div className="stage">
+        <div className="stage-scene"><StudioScene mood={sceneMood} fill /></div>
+        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label="🎙 Booth" onClick={() => setView("make")} />
+        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label="🎬 Make" onClick={() => setView("make")} />
+        <Hotspot style={{ left: "28%", top: "15%", width: "44%", height: "25%" }} label="🔥 The Scene" onClick={() => setView("scene")} />
+        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label="👥 Crew" onClick={() => setView("crew")} />
+        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label="📋 Office" onClick={() => setView("biz")} />
+
+        <div className="stage-hud">
+          <span className="stage-chip">🔥 {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name}</span>
+          {s.project && <span className="stage-chip proj">▸ {s.project.title} · {s.phase === "polish" ? "polish" : `wk ${Math.min(s.project.weeksElapsed, s.project.weeksTotal)}/${s.project.weeksTotal}`}</span>}
+          {s.narrator && <span className="stage-chip narr">“{s.narrator}”</span>}
+        </div>
       </div>
 
-      <StudioScene mood={sceneMood} />
-
-      {s.narrator && <div className="narrator">“{s.narrator}” <span className="narrator-by">— the scene report</span></div>}
-
-      <main className="layout">
-        <div className="col-main">
-          {s.project ? <ProjectView /> : <IdleView onNew={() => setShowNew(true)} canPrestige={canPrestige} onPrestige={() => setShowPrestige(true)} />}
-          <GoalsStrip />
-          <StaffPanel />
+      <footer className="dock">
+        <div className="dock-nav">
+          <button className={`dock-btn ${view === "make" ? "on" : ""}`} onClick={() => setView("make")}>🎬<span>Make</span></button>
+          <button className={`dock-btn ${view === "crew" ? "on" : ""}`} onClick={() => setView("crew")}>👥<span>Crew</span></button>
+          <button className={`dock-btn ${view === "biz" ? "on" : ""}`} onClick={() => setView("biz")}>📋<span>Office</span></button>
+          <button className={`dock-btn ${view === "scene" ? "on" : ""}`} onClick={() => setView("scene")}>🔥<span>Scene</span></button>
         </div>
-        <div className="col-side">
-          <ContractsPanel />
-          <MarketingPanel />
-          <LabelPanel />
-          <UpgradesPanel />
-          {s.catalog.length > 0 && <CatalogPanel />}
-          {s.regulars.length > 0 && <RegularsPanel />}
-          <RivalsPanel />
-          <RecruitPanel />
-          <LogPanel />
+        <div className="dock-actions">
+          {s.project ? (
+            s.phase === "polish" ? (
+              <>
+                <Button onClick={s.advanceWeek} title="Reduce rough edges">Polish</Button>
+                <Button variant="primary" onClick={s.release}>Release ▸</Button>
+              </>
+            ) : (
+              <>
+                {spikeReady && <Button onClick={s.takeSpike} title="Gamble for a breakthrough">⚡ Spike</Button>}
+                <Button variant="primary" onClick={s.advanceWeek}>Work a Week ▸</Button>
+              </>
+            )
+          ) : (
+            <>
+              <Button variant="ghost" onClick={s.advanceWeek}>Skip Week</Button>
+              <Button variant="primary" onClick={() => setShowNew(true)}>＋ New Project</Button>
+            </>
+          )}
         </div>
-      </main>
+      </footer>
+
+      {view === "make" && <Overlay title="Studio Floor" onClose={() => setView(null)}>{s.project ? <ProjectView /> : <IdleView onNew={() => setShowNew(true)} canPrestige={canPrestige} onPrestige={() => setShowPrestige(true)} />}<GoalsStrip /></Overlay>}
+      {view === "crew" && <Overlay title="Crew & Casting" onClose={() => setView(null)}><StaffPanel /><RecruitPanel /></Overlay>}
+      {view === "biz" && <Overlay title="The Office" onClose={() => setView(null)}><ContractsPanel /><MarketingPanel /><LabelPanel /><UpgradesPanel /></Overlay>}
+      {view === "scene" && <Overlay title="The Scene" onClose={() => setView(null)}><SceneControls canPrestige={canPrestige} onPrestige={() => setShowPrestige(true)} /><GoalsStrip />{s.catalog.length > 0 && <CatalogPanel />}{s.regulars.length > 0 && <RegularsPanel />}<RivalsPanel /><LogPanel /></Overlay>}
 
       {modal === "start" && <StartScreen />}
       {modal === "new" && <NewProjectModal onClose={() => setShowNew(false)} />}
@@ -127,6 +149,35 @@ export function App() {
 
       {s.banner && <div className="banner-toast">{s.banner}</div>}
     </div>
+  );
+}
+
+function Hotspot({ style, label, onClick }: { style: CSSProperties; label: string; onClick: () => void }) {
+  return <button className="hotspot" style={style} onClick={onClick}><span className="hs-label">{label}</span></button>;
+}
+
+function Overlay({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="overlay-wrap" onClick={onClose}>
+      <div className="overlay" onClick={(e) => e.stopPropagation()}>
+        <div className="overlay-head"><h2>{title}</h2><button className="x" onClick={onClose}>✕</button></div>
+        <div className="overlay-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function SceneControls({ canPrestige, onPrestige }: { canPrestige: boolean; onPrestige: () => void }) {
+  const s = useGame();
+  return (
+    <Panel title="The Scene">
+      <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+        <span className="muted">🔥 Trend: {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name} · {s.trend.monthsLeft}mo</span>
+        <Button variant="ghost" disabled={s.trendPreviewed || s.cash < 1200} onClick={() => useGame.getState().previewTrend()}>{s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}</Button>
+        {canPrestige && <Button variant="ghost" onClick={onPrestige}>↻ Legacy Reset</Button>}
+        {s.cash < 0 && !s.bailoutUsed && <Button variant="ghost" onClick={() => useGame.getState().takeBailout()}>🆘 AP Bailout</Button>}
+      </div>
+    </Panel>
   );
 }
 

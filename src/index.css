@@ -425,3 +425,38 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .studio-banner { width: 100%; height: 230px; overflow: hidden; border: 2px solid var(--edge); box-shadow: var(--shadow); margin-bottom: 16px; background: #2a2018; }
 .studio-banner svg { display: block; width: 100%; height: 100%; }
 @media (max-width: 880px) { .studio-banner { height: 170px; } }
+
+/* ======================= One-viewport game shell ======================= */
+.game { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+.hud { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-bottom: 3px solid var(--edge); flex-wrap: wrap; z-index: 6; }
+.hud .stats { gap: 8px; }
+
+.stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #2a2018; }
+.stage-scene { position: absolute; inset: 0; }
+.studio-fill { position: absolute; inset: 0; }
+.studio-fill svg { width: 100%; height: 100%; display: block; }
+
+.hotspot { position: absolute; border: none; background: transparent; cursor: pointer; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; transition: background .12s; }
+.hotspot:hover { background: rgba(255,240,210,.10); outline: 3px dashed var(--accent); outline-offset: -4px; }
+.hs-label { font-family: inherit; font-size: 12px; font-weight: bold; background: var(--edge); color: var(--bg); border: 2px solid var(--edge); padding: 3px 9px; opacity: .5; transition: opacity .12s, transform .12s; box-shadow: 2px 2px 0 rgba(0,0,0,.4); }
+.hotspot:hover .hs-label { opacity: 1; transform: translateY(-2px); }
+
+.stage-hud { position: absolute; left: 12px; bottom: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.stage-chip { font-size: 12px; font-weight: bold; background: rgba(42,32,24,.82); color: var(--bg); border: 2px solid var(--edge); padding: 4px 10px; }
+.stage-chip.proj { background: rgba(232,100,60,.92); }
+.stage-chip.narr { font-style: italic; font-weight: normal; background: rgba(42,32,24,.7); }
+
+.dock { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-top: 3px solid var(--edge); z-index: 6; flex-wrap: wrap; }
+.dock-nav { display: flex; gap: 6px; }
+.dock-btn { font-family: inherit; font-weight: bold; cursor: pointer; border: 2px solid var(--edge); background: var(--bg2); padding: 5px 10px; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 52px; box-shadow: 2px 2px 0 var(--edge); }
+.dock-btn span { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+.dock-btn.on { background: var(--accent); color: #fff; }
+.dock-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+.dock-actions { display: flex; gap: 8px; align-items: center; }
+
+.overlay-wrap { position: absolute; inset: 0; background: rgba(20,14,8,.55); display: grid; place-items: center; padding: 14px; z-index: 30; }
+.overlay { width: min(900px, 94%); max-height: 86%; overflow-y: auto; background: var(--bg); border: 3px solid var(--edge); box-shadow: 6px 6px 0 #000; display: flex; flex-direction: column; }
+.overlay-head { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; background: var(--edge); color: var(--bg); padding: 8px 14px; z-index: 2; }
+.overlay-head h2 { font-size: 14px; }
+.overlay-body { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 760px) { .hud .brand-sub { display: none; } .dock-btn span { display: none; } }

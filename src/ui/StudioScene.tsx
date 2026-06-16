@@ -87,8 +87,8 @@ function geo(m: string, p: Pal) {
   <rect width="1280" height="720" fill="${p.amb}" opacity="${p.ambO}"/><rect width="1280" height="720" fill="url(#vig_${m})"/>`;
 }
 
-export function StudioScene({ mood }: { mood: Mood }) {
+export function StudioScene({ mood, fill }: { mood: Mood; fill?: boolean }) {
   const p = PAL[mood];
   const svg = `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">${defs(mood, p)}${geo(mood, p)}</svg>`;
-  return <div className="studio-banner" dangerouslySetInnerHTML={{ __html: svg }} />;
+  return <div className={fill ? "studio-fill" : "studio-banner"} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
