@@ -491,3 +491,7 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .overlay { animation: ov-slide .24s cubic-bezier(.2, .8, .2, 1); }
 @keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ov-slide { from { opacity: 0; transform: translateY(18px) scale(.99); } to { opacity: 1; transform: none; } }
+
+.mute-btn { cursor: pointer; border: 2px solid var(--edge); background: var(--bg2); color: var(--ink); padding: 4px 7px; display: grid; place-items: center; box-shadow: 2px 2px 0 var(--edge); align-self: stretch; }
+.mute-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.mute-btn:active { transform: translate(2px, 2px); box-shadow: none; }

@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { CRITICS } from "../game/data";
 import { useGame } from "../game/store";
 import { Button } from "./components";
+import { Icon } from "./Icon";
 import { confetti, screenShake, useCountUp } from "./juice";
+import { sfx } from "./sound";
 
 export function ScoreReveal() {
   const r = useGame((s) => s.lastRelease)!;
@@ -19,7 +21,7 @@ export function ScoreReveal() {
     timers.push(
       window.setTimeout(() => {
         setShowTotal(true);
-        if (r.score40 >= 26) confetti(r.legendary ? 150 : 70);
+        if (r.score40 >= 26) { confetti(r.legendary ? 150 : 70); sfx.release(); } else { sfx.bad(); }
         if (r.legendary) screenShake();
       }, 450 + r.criticScores.length * 520 + 150)
     );
@@ -59,7 +61,7 @@ export function ScoreReveal() {
               <span>+{r.buzzGain.toLocaleString()} buzz</span>
               <span className="pay-good">${r.revenue.toLocaleString()}</span>
             </div>
-            {r.surprise && <div className="surprise-line">🎁 {r.surprise}</div>}
+            {r.surprise && <div className="surprise-line"><Icon name="gift" size={13} /> {r.surprise}</div>}
             <div className="row center">
               <Button variant="primary" onClick={dismiss}>Onward ▸</Button>
             </div>

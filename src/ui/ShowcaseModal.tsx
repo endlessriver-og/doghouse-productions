@@ -1,6 +1,7 @@
 import { BOOTHS } from "../game/data";
 import { useGame } from "../game/store";
 import { money } from "./components";
+import { Icon } from "./Icon";
 
 export function ShowcaseModal() {
   const cash = useGame((s) => s.cash);
@@ -8,7 +9,7 @@ export function ShowcaseModal() {
   return (
     <div className="modal-backdrop">
       <div className="modal story-big" onClick={(e) => e.stopPropagation()}>
-        <div className="story-kicker">🎪 THE SHOWCASE · annual</div>
+        <div className="story-kicker"><Icon name="trophy" size={12} /> THE SHOWCASE · annual</div>
         <h2 className="story-title">The scene's big weekend</h2>
         <p className="story-body">Every studio in the city sets up shop. Pick a presence — bigger booth, bigger spike in buzz + members.</p>
         <div className="choices-list">

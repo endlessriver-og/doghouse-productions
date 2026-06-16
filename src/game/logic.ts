@@ -236,7 +236,7 @@ export function produceWeek(
     let spark = 1;
     if (Math.random() < SPARK_CHANCE * focus.sparkMult) {
       spark = 2;
-      logs.push({ week, text: `✨ ${c.name} had a breakthrough.`, kind: "good" });
+      logs.push({ week, text: `${c.name} had a breakthrough.`, kind: "good" });
     }
     const role = ROLES[c.role];
     for (const axis of AXES) {

@@ -1,5 +1,6 @@
 import { EVENT_DECK } from "../game/data";
 import { useGame } from "../game/store";
+import { Icon } from "./Icon";
 
 export function EventModal() {
   const id = useGame((s) => s.activeEventId);
@@ -9,7 +10,7 @@ export function EventModal() {
   return (
     <div className="modal-backdrop">
       <div className="modal event" onClick={(e) => e.stopPropagation()}>
-        <div className="story-kicker">⚡ THE WEEK BRINGS…</div>
+        <div className="story-kicker"><Icon name="spike" size={12} /> THE WEEK BRINGS…</div>
         <h2 className="story-title">{card.title}</h2>
         <p className="story-body">{card.body}</p>
         <div className="choices-list">

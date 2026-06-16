@@ -8,7 +8,7 @@ export type IconName =
   | "logo" | "make" | "crew" | "office" | "scene" | "booth"
   | "cred" | "spike" | "bailout" | "goal" | "trophy" | "gift"
   | "sparkle" | "heart" | "clash" | "trend" | "scout" | "week"
-  | "label" | "upgrade" | "contract" | "rival" | "release";
+  | "label" | "upgrade" | "contract" | "rival" | "release" | "sound" | "mute";
 
 const P: Record<IconName, ReactNode> = {
   logo: <><path d="M3.5 11 L12 4 L20.5 11" /><path d="M5.5 10 V20 H18.5 V10" /><path d="M10 20 V14.5 H14 V20" /></>,
@@ -34,6 +34,8 @@ const P: Record<IconName, ReactNode> = {
   contract: <><rect x="5" y="3.5" width="14" height="17" rx="1.5" /><path d="M8.5 8 H15.5 M8.5 11.5 H15.5 M8.5 15 H12.5" /></>,
   rival: <><path d="M4 20 V8 L9 4 L9 20" /><path d="M9 20 V11 L20 8 V20 Z" /><path d="M13 12.5 V15.5 M16.5 11.5 V14.5" /></>,
   release: <><circle cx="12" cy="12" r="8.5" /><path d="M10 8 L16 12 L10 16 Z" /></>,
+  sound: <><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" /><path d="M16 9.5 a3.5 3.5 0 0 1 0 5 M18.5 7 a7 7 0 0 1 0 10" /></>,
+  mute: <><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" /><path d="M16.5 9.5 L21.5 14.5 M21.5 9.5 L16.5 14.5" /></>,
 };
 
 export function Icon({ name, size = 16, className = "" }: { name: IconName; size?: number; className?: string }) {

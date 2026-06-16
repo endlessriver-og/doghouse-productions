@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useGame } from "../game/store";
 import { Button } from "./components";
+import { Icon } from "./Icon";
 import { confetti } from "./juice";
 
 export function AwardsModal() {
@@ -19,7 +20,7 @@ export function AwardsModal() {
           {a.categories.map((c) => (
             <div key={c.name} className={`award-row ${c.youWon ? "award-win" : ""}`}>
               <span className="award-cat">{c.name}</span>
-              <span className="award-winner">{c.youWon ? "🏆 YOU" : c.winner}</span>
+              <span className="award-winner">{c.youWon ? <><Icon name="trophy" size={13} /> YOU</> : c.winner}</span>
             </div>
           ))}
         </div>

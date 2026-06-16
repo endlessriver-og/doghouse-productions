@@ -1,6 +1,7 @@
 import { VENDOR_ITEMS } from "../game/data";
 import { useGame } from "../game/store";
 import { Button, money } from "./components";
+import { Icon } from "./Icon";
 
 export function VendorModal() {
   const cash = useGame((s) => s.cash);
@@ -9,7 +10,7 @@ export function VendorModal() {
   return (
     <div className="modal-backdrop">
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="story-kicker">🛒 THE VENDOR · annual visit</div>
+        <div className="story-kicker"><Icon name="gift" size={12} /> THE VENDOR · annual visit</div>
         <h2 className="story-title">Pumpkin Products drops by</h2>
         <div className="choices-list">
           {VENDOR_ITEMS.map((it) => (

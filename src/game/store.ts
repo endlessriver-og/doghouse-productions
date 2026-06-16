@@ -143,7 +143,7 @@ export const useGame = create<Store>()(
 
         let negativeWeeks = cash < 0 ? s.negativeWeeks + 1 : 0;
         let gameOver = false;
-        if (negativeWeeks >= GAMEOVER_FUSE) { gameOver = true; logs = trim([...logs, mk(week, "Out of money too long. The doors close. 🐶", "bad")]); }
+        if (negativeWeeks >= GAMEOVER_FUSE) { gameOver = true; logs = trim([...logs, mk(week, "Out of money too long. The doors close.", "bad")]); }
 
         let interim: GameState = { ...s, cash, staff, project, phase, buzz, trend, week, negativeWeeks, gameOver, banner, log: logs, catalog, rivals, trendPreviewed, narrator };
 
@@ -180,8 +180,8 @@ export const useGame = create<Store>()(
         const r = computeRelease(s, s.project);
         const repGain = r.score40 >= 30 ? Math.round((r.score40 - 28) / 2) : 0;
         let logs = trim([...s.log, mk(s.week, `Released "${r.title}" — ${r.score40}/40 · +${r.newMembers} members · +${r.buzzGain} buzz · $${r.revenue.toLocaleString()}`, "release")]);
-        if (r.surprise) logs = trim([...logs, mk(s.week, `🎁 ${r.surprise}`, "good")]);
-        if (r.legendary) logs = trim([...logs, mk(s.week, `🏆 "${r.title}" is legendary!`, "good")]);
+        if (r.surprise) logs = trim([...logs, mk(s.week, r.surprise, "good")]);
+        if (r.legendary) logs = trim([...logs, mk(s.week, `"${r.title}" is legendary!`, "good")]);
         const cat = catalogFrom(r);
         const credGain = Math.round(r.score40 / 2) + 4;
         let cash2 = s.cash + r.revenue;

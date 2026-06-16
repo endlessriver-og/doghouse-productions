@@ -17,6 +17,7 @@ import { VendorModal } from "./ui/VendorModal";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
 import { Icon } from "./ui/Icon";
 import { useCountUp } from "./ui/juice";
+import { isMuted, sfx, toggleMute } from "./ui/sound";
 
 const AXES = [
   { key: "vision", label: "Vision", color: "#e8643c" },
@@ -32,6 +33,8 @@ export function App() {
   const [view, setView] = useState<View | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [showPrestige, setShowPrestige] = useState(false);
+  const [muted, setMuted] = useState(isMuted());
+  const openView = (v: View | null) => { sfx.nav(); setView(v); };
 
   const year = yearOf(s.week);
   const era = eraForYear(year);
@@ -71,6 +74,26 @@ export function App() {
   const crewAlert = s.staff.some((c) => canPromote(c) && s.cred >= promoteCredCost(c));
   const officeAlert = (!s.project && s.contracts.some((k) => s.reputation >= k.repReq && s.cash >= mediumById(k.medium).budget)) || (s.cash < 0 && !s.bailoutUsed);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      switch (e.key) {
+        case "Escape": setView(null); setShowNew(false); setShowPrestige(false); break;
+        case "1": openView("make"); break;
+        case "2": openView("crew"); break;
+        case "3": openView("biz"); break;
+        case "4": openView("scene"); break;
+        case "n": case "N": if (!s.project) { sfx.click(); setShowNew(true); } break;
+        case " ": case "Enter":
+          if (!view && modal === null) { e.preventDefault(); sfx.click(); s.advanceWeek(); }
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, modal, s.project, s.phase]);
+
   return (
     <div className="game">
       <header className="hud">
@@ -78,7 +101,7 @@ export function App() {
           <span className="logo"><Icon name="logo" size={24} /></span>
           <div>
             <div className="brand-name">{s.studioName}{s.legacyRun > 0 ? ` · Run ${s.legacyRun + 1}` : ""}</div>
-            <div className="brand-sub">Y{year + 1} · M{monthOf(s.week) % 12 + 1} {season.emoji} · {era.name} era</div>
+            <div className="brand-sub">Y{year + 1} · M{monthOf(s.week) % 12 + 1} · {season.name} · {era.name} era</div>
           </div>
         </div>
         <div className="stats">
@@ -88,16 +111,17 @@ export function App() {
           <Stat label="Cred" value={`${s.cred}◆`} />
           <MrrStat mrr={mrr + residual} burn={s.burn} residual={residual} />
           <Stat label="Rep" value={`${s.reputation}`} />
+          <button className="mute-btn" onClick={() => setMuted(toggleMute())} title="Sound on/off"><Icon name={muted ? "mute" : "sound"} size={16} /></button>
         </div>
       </header>
 
       <div className={`stage ${s.phase === "production" ? "producing" : ""}`}>
         <div className="stage-scene"><StudioScene mood={sceneMood} fill /></div>
-        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label={<><Icon name="booth" size={13} /> Booth</>} onClick={() => setView("make")} alert={makeAlert} />
-        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label={<><Icon name="make" size={13} /> Make</>} onClick={() => setView("make")} alert={makeAlert} />
-        <Hotspot style={{ left: "28%", top: "15%", width: "44%", height: "25%" }} label={<><Icon name="scene" size={13} /> The Scene</>} onClick={() => setView("scene")} />
-        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label={<><Icon name="crew" size={13} /> Crew</>} onClick={() => setView("crew")} alert={crewAlert} />
-        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label={<><Icon name="office" size={13} /> Office</>} onClick={() => setView("biz")} alert={officeAlert} />
+        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label={<><Icon name="booth" size={13} /> Booth</>} onClick={() => openView("make")} alert={makeAlert} />
+        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label={<><Icon name="make" size={13} /> Make</>} onClick={() => openView("make")} alert={makeAlert} />
+        <Hotspot style={{ left: "28%", top: "15%", width: "44%", height: "25%" }} label={<><Icon name="scene" size={13} /> The Scene</>} onClick={() => openView("scene")} />
+        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label={<><Icon name="crew" size={13} /> Crew</>} onClick={() => openView("crew")} alert={crewAlert} />
+        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label={<><Icon name="office" size={13} /> Office</>} onClick={() => openView("biz")} alert={officeAlert} />
 
         {s.project && (
           <div className="scene-work">
@@ -116,10 +140,10 @@ export function App() {
 
       <footer className="dock">
         <div className="dock-nav">
-          <button className={`dock-btn ${view === "make" ? "on" : ""}`} onClick={() => setView("make")}><Icon name="make" size={18} /><span>Make</span></button>
-          <button className={`dock-btn ${view === "crew" ? "on" : ""}`} onClick={() => setView("crew")}><Icon name="crew" size={18} /><span>Crew</span></button>
-          <button className={`dock-btn ${view === "biz" ? "on" : ""}`} onClick={() => setView("biz")}><Icon name="office" size={18} /><span>Office</span></button>
-          <button className={`dock-btn ${view === "scene" ? "on" : ""}`} onClick={() => setView("scene")}><Icon name="scene" size={18} /><span>Scene</span></button>
+          <button className={`dock-btn ${view === "make" ? "on" : ""}`} onClick={() => openView("make")}><Icon name="make" size={18} /><span>Make</span></button>
+          <button className={`dock-btn ${view === "crew" ? "on" : ""}`} onClick={() => openView("crew")}><Icon name="crew" size={18} /><span>Crew</span></button>
+          <button className={`dock-btn ${view === "biz" ? "on" : ""}`} onClick={() => openView("biz")}><Icon name="office" size={18} /><span>Office</span></button>
+          <button className={`dock-btn ${view === "scene" ? "on" : ""}`} onClick={() => openView("scene")}><Icon name="scene" size={18} /><span>Scene</span></button>
         </div>
         <div className="dock-actions">
           {s.project ? (
@@ -290,10 +314,10 @@ function ProjectView() {
         </div>
 
         <div className="proj-meta">
-          <span>🔥 Buzz <b>{Math.round(p.hype)}</b></span>
-          <span>🩹 Rough <b>{Math.round(p.roughEdges)}</b></span>
-          <span>👥 {crew.map((c) => c.name.split(" ")[0]).join(", ")}</span>
-          {s.activeContract && <span className="ct-flag">📋 {s.activeContract.client} · need {s.activeContract.minScore}/40 by wk {p.deadlineWeek}</span>}
+          <span><Icon name="trend" size={12} /> Buzz <b>{Math.round(p.hype)}</b></span>
+          <span>Rough <b>{Math.round(p.roughEdges)}</b></span>
+          <span><Icon name="crew" size={12} /> {crew.map((c) => c.name.split(" ")[0]).join(", ")}</span>
+          {s.activeContract && <span className="ct-flag"><Icon name="contract" size={12} /> {s.activeContract.client} · need {s.activeContract.minScore}/40 by wk {p.deadlineWeek}</span>}
         </div>
 
         <div className="row">
@@ -407,7 +431,7 @@ function StaffPanel() {
                 <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} />
               </div>
               <div className="cc-foot">
-                <span className="muted">⚡{c.energy} · {money(c.salary)}/wk</span>
+                <span className="muted">energy {c.energy} · {money(c.salary)}/wk</span>
                 <div className="row" style={{ gap: 4 }}>
                   {promoteReady && <Button variant="ghost" disabled={cred < promoteCost} onClick={() => promote(c.id)} title="Career promotion (Cred)">↑{promoteCost}◆</Button>}
                   <Button variant="ghost" disabled={cash < cost} onClick={() => train(c.id)} title="Boost stats">Train {money(cost)}</Button>
@@ -471,7 +495,7 @@ function GameOverModal() {
   return (
     <div className="modal-backdrop">
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <header className="modal-head"><h2>Studio Closed 🐶</h2></header>
+        <header className="modal-head"><h2>Studio Closed</h2></header>
         <p className="muted center">Doghouse Productions ran out of road in Year {yearOf(s.week) + 1}.</p>
         <div className="payoff"><span>{compact(s.members)} members</span><span>{s.legendary.length} legendary</span><span>best {s.bestScore}/40</span></div>
         <div className="row center"><Button variant="primary" onClick={reset}>New Studio ▸</Button></div>

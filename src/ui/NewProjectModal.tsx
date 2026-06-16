@@ -4,6 +4,7 @@ import { estimateScore, phaseIdeal, phaseMatch } from "../game/logic";
 import { useGame } from "../game/store";
 import type { Focus, MediumId, Phases, ProjectKind, VibeId } from "../game/types";
 import { Button, SynergyBadge, TraitChip, money, roleName } from "./components";
+import { Icon } from "./Icon";
 
 const FOCI: Focus[] = ["balanced", "quality", "fast", "experimental"];
 
@@ -61,8 +62,8 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="kind-tabs">
-          <button className={`kind-tab ${kind === "event" ? "kind-on" : ""}`} onClick={() => switchKind("event")} disabled={!!sequelOf}>🎪 Events <span className="kt-sub">grow members</span></button>
-          <button className={`kind-tab ${kind === "creative" ? "kind-on" : ""}`} onClick={() => switchKind("creative")} disabled={!!sequelOf}>🎬 Creative <span className="kt-sub">grow buzz + cash</span></button>
+          <button className={`kind-tab ${kind === "event" ? "kind-on" : ""}`} onClick={() => switchKind("event")} disabled={!!sequelOf}><Icon name="scene" size={15} /> Events <span className="kt-sub">grow members</span></button>
+          <button className={`kind-tab ${kind === "creative" ? "kind-on" : ""}`} onClick={() => switchKind("creative")} disabled={!!sequelOf}><Icon name="make" size={15} /> Creative <span className="kt-sub">grow buzz + cash</span></button>
         </div>
 
         <div className="np-grid">
@@ -74,7 +75,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
             <div className="chip-row">
               {list.map((opt) => (
                 <button key={opt.id} className={`chip ${medium === opt.id ? "chip-on" : ""} ${trend.medium === opt.id ? "chip-hot" : ""}`} onClick={() => setMedium(opt.id)} disabled={!!sequelOf}>
-                  {opt.name}{trend.medium === opt.id ? " 🔥" : ""}
+                  {opt.name} {trend.medium === opt.id && <Icon name="trend" size={11} />}
                 </button>
               ))}
             </div>
@@ -84,7 +85,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
             <div className="chip-row">
               {VIBES.map((opt) => (
                 <button key={opt.id} className={`chip ${vibe === opt.id ? "chip-on" : ""} ${trend.vibe === opt.id ? "chip-hot" : ""}`} onClick={() => setVibe(opt.id)}>
-                  {opt.name}{trend.vibe === opt.id ? " 🔥" : ""}
+                  {opt.name} {trend.vibe === opt.id && <Icon name="trend" size={11} />}
                 </button>
               ))}
             </div>
@@ -120,7 +121,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
                   <span className="cr-name">{c.name}</span>
                   <span className="cr-role">{roleName(c.role)}·Lv{c.level}</span>
                   <TraitChip trait={c.trait} />
-                  <span className="cr-energy">⚡{c.energy}</span>
+                  <span className="cr-energy">e{c.energy}</span>
                 </button>
               ))}
             </div>

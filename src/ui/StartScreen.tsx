@@ -1,6 +1,7 @@
 import { SCENARIOS } from "../game/data";
 import { useGame } from "../game/store";
 import { money } from "./components";
+import { Icon } from "./Icon";
 
 export function StartScreen() {
   const newGame = useGame((s) => s.newGame);
@@ -9,7 +10,7 @@ export function StartScreen() {
     <div className="modal-backdrop">
       <div className="modal modal-wide start" onClick={(e) => e.stopPropagation()}>
         <div className="start-hero">
-          <span className="logo big">🐶</span>
+          <span className="logo big"><Icon name="logo" size={40} /></span>
           <h1 className="start-title">DOGHOUSE PRODUCTIONS</h1>
           <p className="start-sub">Run a creative studio in Downtown LA. Throw events, make work that travels, turn a room into a scene people pay to belong to. Don't go broke first.</p>
         </div>

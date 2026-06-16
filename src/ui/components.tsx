@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ROLES, TRAITS, mediumById, synergyTier, vibeById } from "../game/data";
 import type { MediumId, RoleId, SynergyTier, TraitId, VibeId } from "../game/types";
+import { sfx } from "./sound";
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 export const compact = (n: number) =>
@@ -34,7 +35,7 @@ export function Button({
   title?: string;
 }) {
   return (
-    <button className={`btn btn-${variant}`} onClick={onClick} disabled={disabled} title={title}>
+    <button className={`btn btn-${variant}`} onClick={onClick ? () => { sfx.click(); onClick(); } : undefined} disabled={disabled} title={title}>
       {children}
     </button>
   );
