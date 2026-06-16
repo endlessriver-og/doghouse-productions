@@ -15,6 +15,7 @@ import { StoryModal } from "./ui/StoryModal";
 import { UpgradesPanel } from "./ui/UpgradesPanel";
 import { VendorModal } from "./ui/VendorModal";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
+import { Icon } from "./ui/Icon";
 import { useCountUp } from "./ui/juice";
 
 const AXES = [
@@ -74,7 +75,7 @@ export function App() {
     <div className="game">
       <header className="hud">
         <div className="brand">
-          <span className="logo">🐶</span>
+          <span className="logo"><Icon name="logo" size={24} /></span>
           <div>
             <div className="brand-name">{s.studioName}{s.legacyRun > 0 ? ` · Run ${s.legacyRun + 1}` : ""}</div>
             <div className="brand-sub">Y{year + 1} · M{monthOf(s.week) % 12 + 1} {season.emoji} · {era.name} era</div>
@@ -92,11 +93,11 @@ export function App() {
 
       <div className={`stage ${s.phase === "production" ? "producing" : ""}`}>
         <div className="stage-scene"><StudioScene mood={sceneMood} fill /></div>
-        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label="🎙 Booth" onClick={() => setView("make")} alert={makeAlert} />
-        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label="🎬 Make" onClick={() => setView("make")} alert={makeAlert} />
-        <Hotspot style={{ left: "28%", top: "15%", width: "44%", height: "25%" }} label="🔥 The Scene" onClick={() => setView("scene")} />
-        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label="👥 Crew" onClick={() => setView("crew")} alert={crewAlert} />
-        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label="📋 Office" onClick={() => setView("biz")} alert={officeAlert} />
+        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label={<><Icon name="booth" size={13} /> Booth</>} onClick={() => setView("make")} alert={makeAlert} />
+        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label={<><Icon name="make" size={13} /> Make</>} onClick={() => setView("make")} alert={makeAlert} />
+        <Hotspot style={{ left: "28%", top: "15%", width: "44%", height: "25%" }} label={<><Icon name="scene" size={13} /> The Scene</>} onClick={() => setView("scene")} />
+        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label={<><Icon name="crew" size={13} /> Crew</>} onClick={() => setView("crew")} alert={crewAlert} />
+        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label={<><Icon name="office" size={13} /> Office</>} onClick={() => setView("biz")} alert={officeAlert} />
 
         {s.project && (
           <div className="scene-work">
@@ -107,7 +108,7 @@ export function App() {
         )}
 
         <div className="stage-hud">
-          <span className="stage-chip">🔥 {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name}</span>
+          <span className="stage-chip"><Icon name="trend" size={12} /> {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name}</span>
           {s.project && <span className="stage-chip proj">▸ {s.project.title}</span>}
           {s.narrator && <span className="stage-chip narr">“{s.narrator}”</span>}
         </div>
@@ -115,10 +116,10 @@ export function App() {
 
       <footer className="dock">
         <div className="dock-nav">
-          <button className={`dock-btn ${view === "make" ? "on" : ""}`} onClick={() => setView("make")}>🎬<span>Make</span></button>
-          <button className={`dock-btn ${view === "crew" ? "on" : ""}`} onClick={() => setView("crew")}>👥<span>Crew</span></button>
-          <button className={`dock-btn ${view === "biz" ? "on" : ""}`} onClick={() => setView("biz")}>📋<span>Office</span></button>
-          <button className={`dock-btn ${view === "scene" ? "on" : ""}`} onClick={() => setView("scene")}>🔥<span>Scene</span></button>
+          <button className={`dock-btn ${view === "make" ? "on" : ""}`} onClick={() => setView("make")}><Icon name="make" size={18} /><span>Make</span></button>
+          <button className={`dock-btn ${view === "crew" ? "on" : ""}`} onClick={() => setView("crew")}><Icon name="crew" size={18} /><span>Crew</span></button>
+          <button className={`dock-btn ${view === "biz" ? "on" : ""}`} onClick={() => setView("biz")}><Icon name="office" size={18} /><span>Office</span></button>
+          <button className={`dock-btn ${view === "scene" ? "on" : ""}`} onClick={() => setView("scene")}><Icon name="scene" size={18} /><span>Scene</span></button>
         </div>
         <div className="dock-actions">
           {s.project ? (
@@ -129,7 +130,7 @@ export function App() {
               </>
             ) : (
               <>
-                {spikeReady && <Button onClick={s.takeSpike} title="Gamble for a breakthrough">⚡ Spike</Button>}
+                {spikeReady && <Button onClick={s.takeSpike} title="Gamble for a breakthrough"><Icon name="spike" size={13} /> Spike</Button>}
                 <Button variant="primary" onClick={s.advanceWeek}>Work a Week ▸</Button>
               </>
             )
@@ -163,7 +164,7 @@ export function App() {
   );
 }
 
-function Hotspot({ style, label, onClick, alert }: { style: CSSProperties; label: string; onClick: () => void; alert?: boolean }) {
+function Hotspot({ style, label, onClick, alert }: { style: CSSProperties; label: ReactNode; onClick: () => void; alert?: boolean }) {
   return (
     <button className={`hotspot ${alert ? "alert" : ""}`} style={style} onClick={onClick}>
       <span className="hs-label">{label}{alert && <span className="hs-dot" />}</span>
@@ -187,10 +188,10 @@ function SceneControls({ canPrestige, onPrestige }: { canPrestige: boolean; onPr
   return (
     <Panel title="The Scene">
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-        <span className="muted">🔥 Trend: {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name} · {s.trend.monthsLeft}mo</span>
+        <span className="muted"><Icon name="trend" size={12} /> Trend: {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name} · {s.trend.monthsLeft}mo</span>
         <Button variant="ghost" disabled={s.trendPreviewed || s.cash < 1200} onClick={() => useGame.getState().previewTrend()}>{s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}</Button>
         {canPrestige && <Button variant="ghost" onClick={onPrestige}>↻ Legacy Reset</Button>}
-        {s.cash < 0 && !s.bailoutUsed && <Button variant="ghost" onClick={() => useGame.getState().takeBailout()}>🆘 AP Bailout</Button>}
+        {s.cash < 0 && !s.bailoutUsed && <Button variant="ghost" onClick={() => useGame.getState().takeBailout()}><Icon name="bailout" size={13} /> AP Bailout</Button>}
       </div>
     </Panel>
   );
@@ -225,13 +226,13 @@ function IdleView({ onNew, canPrestige, onPrestige }: { onNew: () => void; canPr
           <Button variant="primary" onClick={onNew}>＋ New Project</Button>
           <Button variant="ghost" onClick={advanceWeek} title="Pass a week">Skip Week ▸</Button>
           {canPrestige && <Button variant="ghost" onClick={onPrestige} title="Reset for a permanent bonus">↻ Legacy Reset</Button>}
-          {cash < 0 && !bailoutUsed && <Button variant="ghost" onClick={takeBailout} title="AP floats one month's rent (once per run)">🆘 AP Bailout</Button>}
+          {cash < 0 && !bailoutUsed && <Button variant="ghost" onClick={takeBailout} title="AP floats one month's rent (once per run)"><Icon name="bailout" size={13} /> AP Bailout</Button>}
         </div>
         <OnboardingHint />
         <div className="idle-stats"><span className="muted">{totalReleases} shipped · {legendary.length} legendary</span></div>
         {legendary.length > 0 && (
           <div className="legend-wall">
-            <div className="field-label">🏆 Legendary</div>
+            <div className="field-label"><Icon name="trophy" size={13} /> Legendary</div>
             {legendary.map((r, i) => <div key={i} className="legend-row"><span>{r.title}</span><span className="muted">{mediumById(r.medium).name} · {r.score40}/40</span></div>)}
           </div>
         )}
@@ -297,7 +298,7 @@ function ProjectView() {
 
         <div className="row">
           {s.phase === "production" && <Button variant="primary" onClick={advanceWeek}>Work a Week ▸</Button>}
-          {spikeReady && <Button onClick={takeSpike} title="Gamble: ~55% big breakthrough, else rough edges + buzz hit">⚡ Risk Spike</Button>}
+          {spikeReady && <Button onClick={takeSpike} title="Gamble: ~55% big breakthrough, else rough edges + buzz hit"><Icon name="spike" size={13} /> Risk Spike</Button>}
           {s.phase === "polish" && (
             <>
               <Button onClick={advanceWeek} title="Reduce rough edges">Polish 1 Wk</Button>
@@ -320,7 +321,7 @@ function GoalsStrip() {
   if (goals.length === 0) return null;
   return (
     <div className="goals-strip">
-      <span className="field-label" style={{ margin: 0 }}>🎯 Goals</span>
+      <span className="field-label" style={{ margin: 0 }}><Icon name="goal" size={13} /> Goals</span>
       {goals.map((g) => (
         <span key={g.id} className={`goal-chip ${g.done ? "goal-done" : ""}`}>{g.done ? "✓ " : ""}{g.label} <b>+{money(g.reward)}</b></span>
       ))}
@@ -401,7 +402,7 @@ function StaffPanel() {
               <div className="cc-head"><span className="cc-name">{c.name}</span><span className="cc-role">{careerTitle(c.role, c.tier)} · Lv{c.level}</span></div>
               <TraitChip trait={c.trait} />
               {c.tier > 0 && <span className="tier-chip">★{c.tier}</span>}
-              {bond && partner && <span className={`bond-chip bond-${bond.kind}`}>{bond.kind === "chemistry" ? "♥" : "⚡"} {partner.name.split(" ")[0]}</span>}
+              {bond && partner && <span className={`bond-chip bond-${bond.kind}`}><Icon name={bond.kind === "chemistry" ? "heart" : "clash"} size={11} /> {partner.name.split(" ")[0]}</span>}
               <div className="cc-stats">
                 <Mini label="VIS" v={c.stats.vision} /><Mini label="CRF" v={c.stats.craft} /><Mini label="SND" v={c.stats.sound} /><Mini label="STY" v={c.stats.story} /><Mini label="HUS" v={c.stats.hustle} />
               </div>

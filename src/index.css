@@ -475,3 +475,19 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .scene-work { position: absolute; left: 50%; top: 35%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(42,32,24,.85); border: 2px solid var(--edge); padding: 5px 10px; pointer-events: none; box-shadow: 3px 3px 0 rgba(0,0,0,.4); z-index: 4; }
 .scene-work-bar { width: 120px; }
 .scene-work-wk { font-size: 11px; font-weight: bold; color: var(--bg); }
+
+/* --- icon system + UI polish --- */
+.icon { display: inline-block; vertical-align: -0.14em; flex: 0 0 auto; }
+.logo { color: var(--bg); }
+.dock-btn .icon { margin-bottom: 1px; }
+.hs-label .icon { vertical-align: -0.12em; }
+.bond-chip .icon, .field-label .icon, .stage-chip .icon, .btn .icon { vertical-align: -0.12em; }
+
+.btn:hover:not(:disabled), .dock-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.btn:active:not(:disabled), .dock-btn:active { transform: translate(2px, 2px); box-shadow: none; filter: none; }
+.hotspot { transition: background .12s ease-out; }
+
+.overlay-wrap { animation: ov-fade .18s ease-out; }
+.overlay { animation: ov-slide .24s cubic-bezier(.2, .8, .2, 1); }
+@keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ov-slide { from { opacity: 0; transform: translateY(18px) scale(.99); } to { opacity: 1; transform: none; } }

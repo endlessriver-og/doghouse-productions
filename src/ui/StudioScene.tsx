@@ -30,6 +30,9 @@ function defs(m: string, p: Pal) {
     <filter id="neon_${m}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="soft2_${m}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
     <radialGradient id="vig_${m}" cx="0.5" cy="0.46" r="0.75"><stop offset="0.58" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#120c06" stop-opacity="${p.vig}"/></radialGradient>
+    <linearGradient id="floorshade_${m}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c0f06" stop-opacity="0.28"/><stop offset="1" stop-color="#1c0f06" stop-opacity="0"/></linearGradient>
+    <filter id="cshadow_${m}" x="-20%" y="-60%" width="140%" height="240%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="grain_${m}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0"/></filter>
   </defs>`;
 }
 
@@ -54,6 +57,8 @@ function geo(m: string, p: Pal) {
   <g stroke="#4f7a47" stroke-width="4" fill="none"><path d="M120 354 q-8 60 6 110"/><path d="M120 354 q14 50 -2 96"/></g>
   <g fill="#6aa05c"><rect x="108" y="400" width="12" height="10" rx="3"/><rect x="124" y="430" width="12" height="10" rx="3"/><rect x="110" y="456" width="12" height="10" rx="3"/></g>
   <rect x="0" y="560" width="1280" height="160" fill="url(#plank_${m})"/><rect x="0" y="560" width="1280" height="6" fill="#caa05e"/>
+  <rect x="0" y="560" width="1280" height="30" fill="url(#floorshade_${m})"/>
+  <g filter="url(#cshadow_${m})" fill="#1f0f05" opacity="0.24"><ellipse cx="195" cy="575" rx="128" ry="13"/><ellipse cx="645" cy="578" rx="186" ry="15"/><ellipse cx="1088" cy="575" rx="112" ry="13"/><ellipse cx="265" cy="696" rx="118" ry="12"/><ellipse cx="1216" cy="513" rx="32" ry="7"/><ellipse cx="732" cy="569" rx="26" ry="6"/></g>
   <ellipse cx="640" cy="600" rx="270" ry="64" fill="url(#pool_${m})"/><ellipse cx="1095" cy="612" rx="120" ry="34" fill="url(#pool_${m})"/><ellipse cx="345" cy="600" rx="70" ry="30" fill="url(#pool_${m})"/>
   <g>
     <rect x="70" y="372" width="250" height="200" rx="10" fill="#241f30" stroke="#1a1622" stroke-width="3"/><rect x="82" y="384" width="226" height="120" rx="6" fill="url(#foam_${m})"/><rect x="82" y="384" width="226" height="120" rx="6" fill="#1f1b2c" opacity="0.18"/><path d="M96 392 l60 0 -90 110 -16 0z" fill="#ffffff" opacity="0.06"/>
@@ -73,7 +78,7 @@ function geo(m: string, p: Pal) {
   <rect x="476" y="344" width="338" height="3" rx="1" fill="#ffb27a" opacity="${0.55 * p.neonO}"/>
   <g>
     <ellipse cx="1080" cy="612" rx="170" ry="40" fill="#2a9d8f" opacity="0.85"/><ellipse cx="1080" cy="612" rx="130" ry="30" fill="none" stroke="#1f7d72" stroke-width="4"/>
-    <rect x="990" y="500" width="200" height="70" rx="14" fill="#d2694a" stroke="#2a2018" stroke-width="3"/><rect x="998" y="494" width="60" height="40" rx="10" fill="#e07b56" stroke="#2a2018" stroke-width="3"/><rect x="1062" y="494" width="60" height="40" rx="10" fill="#e07b56" stroke="#2a2018" stroke-width="3"/><rect x="1126" y="494" width="60" height="40" rx="10" fill="#e07b56" stroke="#2a2018" stroke-width="3"/>
+    <rect x="990" y="500" width="200" height="70" rx="14" fill="#d2694a" stroke="#2a2018" stroke-width="3"/><path d="M996 546 H1184 V564 q-94 7 -188 0 Z" fill="#a94e35" opacity="0.55"/><rect x="998" y="494" width="60" height="40" rx="10" fill="#e98a64" stroke="#2a2018" stroke-width="3"/><rect x="1062" y="494" width="60" height="40" rx="10" fill="#e07b56" stroke="#2a2018" stroke-width="3"/><rect x="1126" y="494" width="60" height="40" rx="10" fill="#d56f4c" stroke="#2a2018" stroke-width="3"/>
     <rect x="980" y="512" width="22" height="58" rx="8" fill="#c25c3f" stroke="#2a2018" stroke-width="3"/><rect x="1178" y="512" width="22" height="58" rx="8" fill="#c25c3f" stroke="#2a2018" stroke-width="3"/>
     <rect x="1030" y="588" width="100" height="14" rx="4" fill="#9c6532" stroke="#2a2018" stroke-width="3"/><rect x="1050" y="576" width="14" height="14" rx="3" fill="#f4ead5" stroke="#2a2018" stroke-width="2"/>
     <rect x="1196" y="470" width="40" height="40" rx="6" fill="#c98a4b" stroke="#2a2018" stroke-width="3"/><g fill="#4f8a4c" stroke="#2f5f30" stroke-width="2"><path d="M1216 470 q-60 -30 -54 -100 q40 30 54 100z"/><path d="M1216 470 q56 -26 58 -92 q-44 26 -58 92z"/><path d="M1216 470 q-8 -64 6 -116 q22 56 -6 116z"/></g>
@@ -84,7 +89,8 @@ function geo(m: string, p: Pal) {
     <rect x="250" y="630" width="12" height="14" fill="#2a2018"/><rect x="232" y="644" width="48" height="6" rx="3" fill="#2a2018"/>
     <g stroke="#2a2018" stroke-width="4" fill="none"><path d="M352 600 l0 -36 l-20 -16"/></g><rect x="316" y="540" width="26" height="14" rx="6" fill="#e8643c" stroke="#2a2018" stroke-width="3"/><rect x="158" y="582" width="16" height="18" rx="3" fill="#2a9d8f" stroke="#2a2018" stroke-width="2"/>
   </g>
-  <rect width="1280" height="720" fill="${p.amb}" opacity="${p.ambO}"/><rect width="1280" height="720" fill="url(#vig_${m})"/>`;
+  <rect width="1280" height="720" fill="${p.amb}" opacity="${p.ambO}"/><rect width="1280" height="720" fill="url(#vig_${m})"/>
+  <rect width="1280" height="720" filter="url(#grain_${m})" opacity="0.09"/>`;
 }
 
 export function StudioScene({ mood, fill }: { mood: Mood; fill?: boolean }) {
