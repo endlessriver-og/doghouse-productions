@@ -66,6 +66,9 @@ export function App() {
 
   const canPrestige = s.equityTriggered || s.members >= 600 || s.legacyRun > 0;
   const spikeReady = !!s.project && s.phase === "production" && !s.project.spikeUsed && s.project.weeksElapsed >= 1;
+  const makeAlert = !s.project || s.phase === "polish";
+  const crewAlert = s.staff.some((c) => canPromote(c) && s.cred >= promoteCredCost(c));
+  const officeAlert = (!s.project && s.contracts.some((k) => s.reputation >= k.repReq && s.cash >= mediumById(k.medium).budget)) || (s.cash < 0 && !s.bailoutUsed);
 
   return (
     <div className="game">
@@ -87,17 +90,25 @@ export function App() {
         </div>
       </header>
 
-      <div className="stage">
+      <div className={`stage ${s.phase === "production" ? "producing" : ""}`}>
         <div className="stage-scene"><StudioScene mood={sceneMood} fill /></div>
-        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label="🎙 Booth" onClick={() => setView("make")} />
-        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label="🎬 Make" onClick={() => setView("make")} />
+        <Hotspot style={{ left: "3%", top: "30%", width: "23%", height: "44%" }} label="🎙 Booth" onClick={() => setView("make")} alert={makeAlert} />
+        <Hotspot style={{ left: "30%", top: "44%", width: "40%", height: "44%" }} label="🎬 Make" onClick={() => setView("make")} alert={makeAlert} />
         <Hotspot style={{ left: "28%", top: "15%", width: "44%", height: "25%" }} label="🔥 The Scene" onClick={() => setView("scene")} />
-        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label="👥 Crew" onClick={() => setView("crew")} />
-        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label="📋 Office" onClick={() => setView("biz")} />
+        <Hotspot style={{ left: "72%", top: "48%", width: "26%", height: "40%" }} label="👥 Crew" onClick={() => setView("crew")} alert={crewAlert} />
+        <Hotspot style={{ left: "7%", top: "76%", width: "27%", height: "22%" }} label="📋 Office" onClick={() => setView("biz")} alert={officeAlert} />
+
+        {s.project && (
+          <div className="scene-work">
+            <span className={`phase-pill phase-${s.phase}`}>{s.phase === "polish" ? "POLISH" : "PRODUCTION"}</span>
+            <div className="scene-work-bar"><Bar value={s.project.weeksElapsed} max={s.project.weeksTotal} color="#e8643c" /></div>
+            <span className="scene-work-wk">wk {Math.min(s.project.weeksElapsed, s.project.weeksTotal)}/{s.project.weeksTotal}</span>
+          </div>
+        )}
 
         <div className="stage-hud">
           <span className="stage-chip">🔥 {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name}</span>
-          {s.project && <span className="stage-chip proj">▸ {s.project.title} · {s.phase === "polish" ? "polish" : `wk ${Math.min(s.project.weeksElapsed, s.project.weeksTotal)}/${s.project.weeksTotal}`}</span>}
+          {s.project && <span className="stage-chip proj">▸ {s.project.title}</span>}
           {s.narrator && <span className="stage-chip narr">“{s.narrator}”</span>}
         </div>
       </div>
@@ -152,8 +163,12 @@ export function App() {
   );
 }
 
-function Hotspot({ style, label, onClick }: { style: CSSProperties; label: string; onClick: () => void }) {
-  return <button className="hotspot" style={style} onClick={onClick}><span className="hs-label">{label}</span></button>;
+function Hotspot({ style, label, onClick, alert }: { style: CSSProperties; label: string; onClick: () => void; alert?: boolean }) {
+  return (
+    <button className={`hotspot ${alert ? "alert" : ""}`} style={style} onClick={onClick}>
+      <span className="hs-label">{label}{alert && <span className="hs-dot" />}</span>
+    </button>
+  );
 }
 
 function Overlay({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
