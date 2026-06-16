@@ -75,6 +75,19 @@ export function App() {
     if (prevSeason.current !== season.id) { prevSeason.current = season.id; flashScreen(season.id === "winter" ? "#3a3470" : "#fff7df", 240); }
   }, [season.id]);
 
+  // inspiration breakthrough → sparkle burst at the nook
+  const logLen = useDelta(s.log.length);
+  useEffect(() => {
+    if (!logLen.nonce) return;
+    const last = s.log[s.log.length - 1];
+    if (last && /breakthrough/i.test(last.text)) {
+      sfx.coin();
+      const stage = document.querySelector(".stage");
+      if (stage) { const r = stage.getBoundingClientRect(); burst(r.left + r.width * 0.5, r.top + r.height * 0.42, 10); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logLen.nonce]);
+
   const modal = !s.scenarioChosen ? "start"
     : s.gameOver ? "over"
     : s.lastRelease ? "release"
@@ -167,7 +180,7 @@ export function App() {
           {s.project ? (
             s.phase === "polish" ? (
               <>
-                <Button onClick={s.advanceWeek} title="Reduce rough edges">Polish</Button>
+                <Button burst onClick={s.advanceWeek} title="Reduce rough edges">Polish</Button>
                 <Button variant="primary" onClick={s.release}>Release ▸</Button>
               </>
             ) : (
@@ -352,7 +365,7 @@ function ProjectView() {
           {spikeReady && <Button onClick={() => { flashScreen("#ffd86b"); takeSpike(); }} title="Gamble: ~55% big breakthrough, else rough edges + buzz hit"><Icon name="spike" size={13} /> Risk Spike</Button>}
           {s.phase === "polish" && (
             <>
-              <Button onClick={advanceWeek} title="Reduce rough edges">Polish 1 Wk</Button>
+              <Button burst onClick={advanceWeek} title="Reduce rough edges">Polish 1 Wk</Button>
               <Button variant="primary" onClick={release}>Release ▸</Button>
             </>
           )}
@@ -481,7 +494,8 @@ function StaffPanel() {
   );
 }
 function Mini({ label, v }: { label: string; v: number }) {
-  return <div className="mini"><span className="mini-l">{label}</span><span className="mini-v">{v}</span></div>;
+  const { delta, nonce } = useDelta(v);
+  return <div className="mini"><span className="mini-l">{label}</span><span className={`mini-v ${delta > 0 ? "stat-up" : ""}`} key={nonce}>{v}</span></div>;
 }
 
 // ---------------- Recruit ----------------
