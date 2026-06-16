@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FOCUS, careerTitle, eraForYear, mediumById, signingFee, vibeById } from "./game/data";
-import { canPromote, crewCapOf, estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, promoteCredCost, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
+import { MAX_SEASON, SEASON_LEN, canPromote, crewCapOf, estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, promoteCredCost, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
 import { useGame } from "./game/store";
 import { AwardsModal } from "./ui/AwardsModal";
 import { EventModal } from "./ui/EventModal";
@@ -163,6 +163,11 @@ export function App() {
         )}
 
         <div className="stage-hud">
+          {(() => {
+            const weeksLeft = Math.max(0, s.seasonStartWeek + SEASON_LEN - s.week);
+            const hit = s.members >= s.quota;
+            return <span className={`stage-chip objective ${hit ? "obj-hit" : weeksLeft <= 2 ? "obj-urgent" : ""}`}><Icon name="goal" size={12} /> Season {s.season}/{MAX_SEASON} · {compact(s.members)}/{compact(s.quota)} members · {weeksLeft}wk to deadline</span>;
+          })()}
           <span className="stage-chip"><Icon name="trend" size={12} /> {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name}</span>
           {s.project && <span className="stage-chip proj">▸ {s.project.title}</span>}
           {s.narrator && <span className="stage-chip narr">“{s.narrator}”</span>}
@@ -542,13 +547,26 @@ function LogPanel() {
 function GameOverModal() {
   const s = useGame();
   const reset = useGame((a) => a.reset);
+  const cleared = s.runResult === "cleared";
+  const title = cleared ? "You survived the run!" : s.runResult === "missed" ? "Missed the quota" : "Out of road";
+  const sub = cleared
+    ? `Cleared all ${s.season} seasons. The house is yours.`
+    : s.runResult === "missed"
+      ? `Couldn't hit Season ${s.season}'s ${s.quota.toLocaleString()}-member quota.`
+      : `Ran out of cash in Season ${s.season}.`;
   return (
     <div className="modal-backdrop">
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <header className="modal-head"><h2>Studio Closed</h2></header>
-        <p className="muted center">Doghouse Productions ran out of road in Year {yearOf(s.week) + 1}.</p>
-        <div className="payoff"><span>{compact(s.members)} members</span><span>{s.legendary.length} legendary</span><span>best {s.bestScore}/40</span></div>
-        <div className="row center"><Button variant="primary" onClick={reset}>New Studio ▸</Button></div>
+      <div className={`modal ${cleared ? "story-big" : ""}`} onClick={(e) => e.stopPropagation()}>
+        <div className="story-kicker">RUN OVER · {cleared ? "CLEARED" : `SEASON ${s.season}`}</div>
+        <h2 className="story-title">{title}</h2>
+        <p className="story-body">{sub}</p>
+        <div className="payoff">
+          <span>{s.season} seasons</span>
+          <span>{compact(s.peakMembers)} peak members</span>
+          <span>{s.legendary.length} legendary</span>
+        </div>
+        <div className="clout-bank"><Icon name="sparkle" size={16} /> +{s.cloutBanked} Clout <span className="muted">→ {s.clout + s.cloutBanked} banked</span></div>
+        <div className="row center"><Button variant="primary" onClick={reset}>New Run ▸</Button></div>
       </div>
     </div>
   );

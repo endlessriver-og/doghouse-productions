@@ -193,6 +193,9 @@ export interface AwardResult { year: number; categories: AwardCategory[] }
 
 export type Season = "spring" | "summer" | "fall" | "winter";
 
+/** Roguelite run outcome (drives the run-summary modal). */
+export type RunResult = "busted" | "missed" | "cleared" | null;
+
 /** Chemistry/clash between two crew — applies when both are on a project. */
 export interface Bond { a: string; b: string; kind: "chemistry" | "clash" }
 
@@ -273,6 +276,14 @@ export interface GameState {
   legacyRun: number;            // New Game+ count
   legacyTraits: string[];       // permanent prestige bonuses
   scenarioId: string;
+  // roguelite run
+  season: number;            // 1..MAX_SEASON
+  quota: number;             // member target to clear this season
+  seasonStartWeek: number;   // week the current season began
+  peakMembers: number;       // high-water mark this run
+  runResult: RunResult;      // set when the run ends -> summary modal
+  cloutBanked: number;       // Clout earned this run (shown on summary)
+  clout: number;             // meta-currency, carries across runs
   // stats
   totalReleases: number;
   bestScore: number;

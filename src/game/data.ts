@@ -267,12 +267,11 @@ export function makeNamed(name: string, role: RoleId, trait: TraitId, power = 1.
 }
 
 /** The Wave-1 founders you start with. */
+// Roguelite: start small (2). Roster grows via hiring + between-season drafts.
 export function startingCrew(): Creative[] {
   return [
     makeNamed("Slowsie", "producer", "natural", 1.4),
-    makeNamed("Ryan Alberto", "producer", "framework_op", 1.2),
-    makeNamed("AP", "marketer", "ambient_host", 1.15),
-    makeNamed("Jovan", "editor", "reliable", 1.1),
+    makeNamed("Ryan Alberto", "marketer", "ambient_host", 1.2),
   ];
 }
 

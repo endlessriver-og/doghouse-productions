@@ -528,3 +528,11 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .overlay-body > *:nth-child(4) { animation-delay: .2s; }
 .overlay-body > *:nth-child(n+5) { animation-delay: .24s; }
 @keyframes panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* --- roguelite: objective + run summary --- */
+.stage-chip.objective { background: rgba(232, 100, 60, .92); }
+.stage-chip.obj-hit { background: rgba(42, 143, 111, .94); }
+.stage-chip.obj-urgent { background: rgba(193, 66, 46, .95); animation: obj-pulse 1s ease-in-out infinite; }
+@keyframes obj-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .68; } }
+.clout-bank { text-align: center; font-size: 15px; font-weight: bold; color: var(--gold); margin: 12px 16px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.clout-bank .muted { font-weight: normal; }

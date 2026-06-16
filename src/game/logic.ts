@@ -27,6 +27,15 @@ const SPARK_CHANCE = 0.08;
 const ENERGY_DRAIN = 9;
 const ENERGY_REST = 15;
 export const GAMEOVER_FUSE = 8;
+
+// --- roguelite: seasons, rising member quota, Clout scoring ---
+export const SEASON_LEN = 8;   // weeks per season
+export const MAX_SEASON = 8;   // surviving this season's check = run cleared
+export const quotaForSeason = (n: number) => Math.round(35 * Math.pow(1.72, n - 1)); // LBaL-shape curve // TUNE
+export const seasonEndWeek = (startWeek: number) => startWeek + SEASON_LEN;
+export function cloutFromRun(season: number, peakMembers: number, legendaryCount: number, bestScore: number): number {
+  return Math.round(season * 8 + peakMembers / 18 + legendaryCount * 15 + bestScore / 4);
+}
 const EVENT_CHANCE = 0.5;
 const SURPRISE_CHANCE = 0.28;
 const RESIDUAL_MONTHS = 8;
@@ -96,7 +105,7 @@ export function phaseMatch(p: Phases, ideal: Phases): number {
 }
 
 // ---- Initial state ----
-export function createInitialState(scenarioId = "studio", legacyTraits: string[] = [], legacyRun = 0, chosen = true): GameState {
+export function createInitialState(scenarioId = "studio", legacyTraits: string[] = [], legacyRun = 0, chosen = true, clout = 0): GameState {
   const sc = scenarioById(scenarioId);
   const has = (id: string) => legacyTraits.includes(id);
   const cash = sc.cash + (has("pockets") ? 25000 : 0);
@@ -124,6 +133,8 @@ export function createInitialState(scenarioId = "studio", legacyTraits: string[]
     mediumXp: {}, vibeXp: {}, bailoutUsed: false,
     trendPreviewed: false, awardsPending: null, lastAwardYear: 0,
     legacyRun, legacyTraits, scenarioId,
+    season: 1, quota: quotaForSeason(1), seasonStartWeek: 0, peakMembers: sc.members,
+    runResult: null, cloutBanked: 0, clout,
     totalReleases: 0, bestScore: 0, equityTriggered: false, banner: null,
   };
 }

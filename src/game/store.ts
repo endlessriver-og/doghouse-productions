@@ -11,6 +11,7 @@ import {
   createInitialState, crewCapOf, decayCatalog, maybeAddRegular, newProject, polishWeek, produceWeek,
   promoteCreative, promoteCredCost, resolveAwards, resolveSpike, restWeek, rollGoals, rollTrend,
   seasonOf, tickRivals, trainCost, weeklySalary, yearOf,
+  SEASON_LEN, MAX_SEASON, quotaForSeason, cloutFromRun,
 } from "./logic";
 import type { Focus, GameState, LabelKind, LogEntry, MediumId, Phase, Phases, VibeId } from "./types";
 
@@ -145,7 +146,28 @@ export const useGame = create<Store>()(
         let gameOver = false;
         if (negativeWeeks >= GAMEOVER_FUSE) { gameOver = true; logs = trim([...logs, mk(week, "Out of money too long. The doors close.", "bad")]); }
 
-        let interim: GameState = { ...s, cash, staff, project, phase, buzz, trend, week, negativeWeeks, gameOver, banner, log: logs, catalog, rivals, trendPreviewed, narrator };
+        // ---- roguelite season check (hit-or-die quota) ----
+        let season = s.season, quota = s.quota, seasonStartWeek = s.seasonStartWeek;
+        const peakMembers = Math.max(s.peakMembers, s.members);
+        let runResult: GameState["runResult"] = gameOver ? "busted" : null;
+        if (!gameOver && week >= s.seasonStartWeek + SEASON_LEN) {
+          if (s.members >= quota) {
+            if (season >= MAX_SEASON) {
+              gameOver = true; runResult = "cleared";
+              logs = trim([...logs, mk(week, `Season ${season} cleared — you survived the whole run!`, "good")]);
+            } else {
+              season += 1; quota = quotaForSeason(season); seasonStartWeek = week;
+              banner = `★ Season ${season - 1} cleared! Next quota: ${quota.toLocaleString()} members.`;
+              logs = trim([...logs, mk(week, `Season ${season - 1} cleared. Season ${season}: reach ${quota.toLocaleString()} members.`, "good")]);
+            }
+          } else {
+            gameOver = true; runResult = "missed";
+            logs = trim([...logs, mk(week, `Missed the Season ${season} quota — ${s.members}/${quota} members. The doors close.`, "bad")]);
+          }
+        }
+        const cloutBanked = runResult ? cloutFromRun(season, peakMembers, s.legendary.length, s.bestScore) : s.cloutBanked;
+
+        let interim: GameState = { ...s, cash, staff, project, phase, buzz, trend, week, negativeWeeks, gameOver, banner, log: logs, catalog, rivals, trendPreviewed, narrator, season, quota, seasonStartWeek, peakMembers, runResult, cloutBanked };
 
         // goals
         const g = applyGoals(interim);
@@ -382,15 +404,15 @@ export const useGame = create<Store>()(
 
       prestige: (traitId) => {
         const s = get();
-        set({ ...createInitialState(s.scenarioId, [...s.legacyTraits, traitId], s.legacyRun + 1) });
+        set({ ...createInitialState(s.scenarioId, [...s.legacyTraits, traitId], s.legacyRun + 1, true, s.clout + s.cloutBanked) });
       },
-      newGame: (scenarioId) => set({ ...createInitialState(scenarioId, get().legacyTraits, get().legacyRun) }),
+      newGame: (scenarioId) => set({ ...createInitialState(scenarioId, get().legacyTraits, get().legacyRun, true, get().clout + get().cloutBanked) }),
       clearBanner: () => set({ banner: null }),
       clearNarrator: () => set({ narrator: null }),
-      reset: () => set({ ...createInitialState(get().scenarioId, get().legacyTraits, get().legacyRun) }),
+      reset: () => set({ ...createInitialState(get().scenarioId, get().legacyTraits, get().legacyRun, true, get().clout + get().cloutBanked) }),
     }),
     {
-      name: "doghouse-save-v5",
+      name: "doghouse-save-v6",
       partialize: (s) => {
         const {
           startProject, advanceWeek, takeSpike, release, dismissRelease, dismissStory, dismissAwards,
@@ -409,7 +431,7 @@ export const useGame = create<Store>()(
   )
 );
 
-if (typeof localStorage !== "undefined" && !localStorage.getItem("doghouse-save-v5")) {
+if (typeof localStorage !== "undefined" && !localStorage.getItem("doghouse-save-v6")) {
   useGame.setState((s) => s);
 }
 
