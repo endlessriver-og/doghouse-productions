@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FOCUS, careerTitle, eraForYear, mediumById, signingFee, vibeById } from "./game/data";
 import { canPromote, crewCapOf, estimateScore, mrrOf, monthOf, phaseIdeal, phaseMatch, promoteCredCost, residualOf, seasonOf, trainCost, yearOf } from "./game/logic";
 import { useGame } from "./game/store";
@@ -16,7 +16,7 @@ import { UpgradesPanel } from "./ui/UpgradesPanel";
 import { VendorModal } from "./ui/VendorModal";
 import { Bar, Button, Panel, SynergyBadge, TraitChip, compact, money, roleName } from "./ui/components";
 import { Icon } from "./ui/Icon";
-import { burstFromEvent, flashScreen, useCountUp, useDelta } from "./ui/juice";
+import { burst, burstFromEvent, confetti, flashScreen, useCountUp, useDelta } from "./ui/juice";
 import { isMuted, sfx, toggleMute } from "./ui/sound";
 
 const AXES = [
@@ -53,6 +53,27 @@ export function App() {
     const t = window.setTimeout(() => useGame.getState().clearNarrator(), 5000);
     return () => clearTimeout(t);
   }, [s.narrator]);
+
+  // --- outcome reactions: animate the result of time-driven actions ---
+  const monthDelta = useDelta(monthOf(s.week));
+  useEffect(() => {
+    if (!monthDelta.nonce) return;
+    sfx.coin();
+    const el = document.querySelector(".stat");
+    if (el) { const r = el.getBoundingClientRect(); burst(r.left + r.width / 2, r.bottom + 4, 10); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthDelta.nonce]);
+
+  const goalDelta = useDelta(s.goals.filter((g) => g.done).length);
+  useEffect(() => {
+    if (goalDelta.nonce && goalDelta.delta > 0) { sfx.confirm(); confetti(28); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalDelta.nonce]);
+
+  const prevSeason = useRef(season.id);
+  useEffect(() => {
+    if (prevSeason.current !== season.id) { prevSeason.current = season.id; flashScreen(season.id === "winter" ? "#3a3470" : "#fff7df", 240); }
+  }, [season.id]);
 
   const modal = !s.scenarioChosen ? "start"
     : s.gameOver ? "over"
@@ -210,7 +231,7 @@ function SceneControls({ canPrestige, onPrestige }: { canPrestige: boolean; onPr
     <Panel title="The Scene">
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
         <span className="muted"><Icon name="trend" size={12} /> Trend: {mediumById(s.trend.medium).name} × {vibeById(s.trend.vibe).name} · {s.trend.monthsLeft}mo</span>
-        <Button variant="ghost" disabled={s.trendPreviewed || s.cash < 1200} onClick={() => useGame.getState().previewTrend()}>{s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}</Button>
+        <Button variant="ghost" burst disabled={s.trendPreviewed || s.cash < 1200} onClick={() => useGame.getState().previewTrend()}>{s.trendPreviewed ? "scouted ✓" : "Scout $1.2k"}</Button>
         {canPrestige && <Button variant="ghost" onClick={onPrestige}>↻ Legacy Reset</Button>}
         {s.cash < 0 && !s.bailoutUsed && <Button variant="ghost" onClick={() => useGame.getState().takeBailout()}><Icon name="bailout" size={13} /> AP Bailout</Button>}
       </div>
@@ -449,7 +470,7 @@ function StaffPanel() {
                 <span className="muted">energy {c.energy} · {money(c.salary)}/wk</span>
                 <div className="row" style={{ gap: 4 }}>
                   {promoteReady && <Button variant="ghost" disabled={cred < promoteCost} onClick={(e) => { promote(c.id); burstFromEvent(e); }} title="Career promotion (Cred)">↑{promoteCost}◆</Button>}
-                  <Button variant="ghost" disabled={cash < cost} onClick={() => train(c.id)} title="Boost stats">Train {money(cost)}</Button>
+                  <Button variant="ghost" burst disabled={cash < cost} onClick={() => train(c.id)} title="Boost stats">Train {money(cost)}</Button>
                 </div>
               </div>
             </div>

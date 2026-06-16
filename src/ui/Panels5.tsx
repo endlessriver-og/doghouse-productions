@@ -17,7 +17,7 @@ export function ContractsPanel() {
             <div key={k.id} className={`contract ${locked ? "contract-locked" : ""}`}>
               <div className="ct-top"><span className="ct-client">{k.client}</span><span className="ct-reward">{money(k.rewardCash)} · {k.rewardCred}◆</span></div>
               <div className="ct-brief">{k.brief} · due {k.weeks}wk · need {k.minScore}/40{locked ? ` · rep ${k.repReq}` : ""}</div>
-              <Button variant="ghost" disabled={!canTake} onClick={() => accept(k.id)}>{locked ? `Rep ${k.repReq}` : s.project ? "Busy" : "Take ▸"}</Button>
+              <Button variant="ghost" burst disabled={!canTake} onClick={() => accept(k.id)}>{locked ? `Rep ${k.repReq}` : s.project ? "Busy" : "Take ▸"}</Button>
             </div>
           );
         })}
@@ -37,7 +37,7 @@ export function LabelPanel() {
         <div className="label-own">
           <div className="lbl-name">{s.label.name} <span className="muted">· tier {s.label.tier}</span></div>
           <div className="muted">+{Math.round(s.label.revBonus * 100)}% revenue · +{Math.round(s.label.memberBonus * 100)}% members · {money(s.label.monthlyIncome)}/mo</div>
-          <Button variant="ghost" disabled={s.cash < up.cash || s.cred < up.cred} onClick={upgrade}>Upgrade {money(up.cash)} + {up.cred}◆</Button>
+          <Button variant="ghost" burst disabled={s.cash < up.cash || s.cred < up.cred} onClick={upgrade}>Upgrade {money(up.cash)} + {up.cred}◆</Button>
         </div>
       </Panel>
     );
@@ -82,7 +82,7 @@ export function MarketingPanel() {
             <div key={c.id} className="campaign">
               <div className="cp-top"><span className="cp-name">{c.name}</span><span className="muted">{money(c.cost)}{c.cred ? ` + ${c.cred}◆` : ""}</span></div>
               <div className="muted">+{c.buzz} buzz · +{c.members} mbrs{used ? ` · used ${used}×` : ""}{locked ? ` · rep ${c.repReq}` : ""}</div>
-              <Button variant="ghost" disabled={locked || !afford} onClick={() => run(c.id)}>Run ▸</Button>
+              <Button variant="ghost" burst disabled={locked || !afford} onClick={() => run(c.id)}>Run ▸</Button>
             </div>
           );
         })}

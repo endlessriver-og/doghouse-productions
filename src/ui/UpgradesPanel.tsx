@@ -19,7 +19,7 @@ export function UpgradesPanel() {
               </div>
               <div className="up-blurb">{u.blurb}</div>
               {!have && (
-                <Button variant="ghost" disabled={cash < u.cost} onClick={() => buy(u.id)}>Build ▸</Button>
+                <Button variant="ghost" burst disabled={cash < u.cost} onClick={() => buy(u.id)}>Build ▸</Button>
               )}
             </div>
           );

@@ -1,6 +1,7 @@
 import type { MouseEvent, ReactNode } from "react";
 import { ROLES, TRAITS, mediumById, synergyTier, vibeById } from "../game/data";
 import type { MediumId, RoleId, SynergyTier, TraitId, VibeId } from "../game/types";
+import { burstFromEvent } from "./juice";
 import { sfx } from "./sound";
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -26,16 +27,20 @@ export function Panel({ title, children, right }: { title?: string; children: Re
 }
 
 export function Button({
-  children, onClick, variant = "default", disabled, title,
+  children, onClick, variant = "default", disabled, title, burst,
 }: {
   children: ReactNode;
   onClick?: (e: MouseEvent) => void;
   variant?: "default" | "primary" | "ghost";
   disabled?: boolean;
   title?: string;
+  burst?: boolean; // fire a particle burst on click (economy confirms)
 }) {
+  const handler = onClick || burst
+    ? (e: MouseEvent) => { sfx.click(); if (burst) burstFromEvent(e); onClick?.(e); }
+    : undefined;
   return (
-    <button className={`btn btn-${variant}`} onClick={onClick ? (e) => { sfx.click(); onClick(e); } : undefined} disabled={disabled} title={title}>
+    <button className={`btn btn-${variant}`} onClick={handler} disabled={disabled} title={title}>
       {children}
     </button>
   );
