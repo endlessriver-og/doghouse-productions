@@ -471,6 +471,9 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 @keyframes onair-blink { 50% { opacity: .15; } }
 .stage.producing .softcore { animation: soft-pulse 1.7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes soft-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+.stage.producing .worker { animation: work-bob 1.7s ease-in-out infinite; }
+.stage.producing .worker:nth-of-type(2) { animation-delay: .4s; }
+@keyframes work-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 
 .scene-work { position: absolute; left: 50%; top: 35%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(42,32,24,.85); border: 2px solid var(--edge); padding: 5px 10px; pointer-events: none; box-shadow: 3px 3px 0 rgba(0,0,0,.4); z-index: 4; }
 .scene-work-bar { width: 120px; }

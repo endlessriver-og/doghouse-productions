@@ -40,6 +40,33 @@ const dots = (p: Pal) => p.dots
   ? '<g fill="#ffd86b">' + ([[135, 250], [150, 270], [225, 210], [240, 240], [320, 270], [340, 300], [920, 230], [935, 260], [1000, 270], [1095, 220], [1110, 250]] as const).map(([x, y]) => `<rect x="${x}" y="${y}" width="4" height="5"/>`).join("") + "</g>"
   : "";
 
+// --- cozy cast (same ink-outline + cel-shade language as the scene) ---
+interface Figure { skin: string; skinS: string; hair: string; outfit: string; outfitS: string; pose: "stand" | "sit" | "shoot"; work?: boolean }
+function person(x: number, y: number, s: number, o: Figure): string {
+  const { skin, skinS, hair, outfit, outfitS, pose, work } = o;
+  const shadow = `<ellipse cx="0" cy="2" rx="16" ry="4" fill="#1f0f05" opacity="0.25" stroke="none"/>`;
+  const head = `<circle cx="0" cy="-86" r="13" fill="${skin}"/><path d="M3 -97 a13 13 0 0 1 0 22 Z" fill="${skinS}" stroke="none"/><path d="M-13 -87 Q-14 -101 0 -101 Q14 -101 13 -87 Q9 -95 0 -95 Q-9 -95 -13 -87Z" fill="${hair}"/>`;
+  const eyes = pose === "shoot" ? "" : `<circle cx="-4.5" cy="-85" r="1.4" fill="#2a2018" stroke="none"/><circle cx="3.5" cy="-85" r="1.4" fill="#2a2018" stroke="none"/>`;
+  let body: string; let extra = "";
+  if (pose === "sit") {
+    body = `<rect x="-11" y="-15" width="8" height="15" rx="3" fill="${outfitS}"/><rect x="3" y="-15" width="8" height="15" rx="3" fill="${outfitS}"/><rect x="-14" y="-31" width="28" height="11" rx="5" fill="${outfit}"/><path d="M-15 -67 Q-15 -73 -9 -73 H9 Q15 -73 15 -67 V-31 H-15Z" fill="${outfit}"/><path d="M4 -73 H9 Q15 -73 15 -67 V-31 H4Z" fill="${outfitS}" stroke="none"/><rect x="-21" y="-65" width="8" height="28" rx="4" fill="${outfit}"/><rect x="13" y="-65" width="8" height="28" rx="4" fill="${outfit}"/><circle cx="-17" cy="-39" r="3.4" fill="${skin}"/><circle cx="17" cy="-39" r="3.4" fill="${skin}"/>`;
+  } else if (pose === "shoot") {
+    body = `<rect x="-11" y="-34" width="9" height="34" rx="3" fill="${outfitS}"/><rect x="2" y="-34" width="9" height="34" rx="3" fill="${outfitS}"/><path d="M-15 -70 Q-15 -76 -9 -76 H9 Q15 -76 15 -70 V-34 Q15 -30 9 -30 H-9 Q-15 -30 -15 -34Z" fill="${outfit}"/><path d="M4 -76 H9 Q15 -76 15 -70 V-34 Q15 -30 9 -30 H4Z" fill="${outfitS}" stroke="none"/><path d="M-13 -72 Q-22 -80 -9 -86" fill="none" stroke="${outfit}" stroke-width="7"/><path d="M13 -72 Q22 -80 9 -86" fill="none" stroke="${outfit}" stroke-width="7"/>`;
+    extra = `<g stroke-width="2.5"><rect x="-11" y="-93" width="22" height="14" rx="2" fill="#2a2330"/><circle cx="1" cy="-86" r="4.5" fill="#4a4560"/><circle cx="1" cy="-86" r="2" fill="#7a6bd8" stroke="none"/></g>`;
+  } else {
+    body = `<rect x="-11" y="-32" width="9" height="32" rx="3" fill="${outfitS}"/><rect x="2" y="-32" width="9" height="32" rx="3" fill="${outfitS}"/><path d="M-15 -70 Q-15 -76 -9 -76 H9 Q15 -76 15 -70 V-32 Q15 -28 9 -28 H-9 Q-15 -28 -15 -32Z" fill="${outfit}"/><path d="M4 -76 H9 Q15 -76 15 -70 V-32 Q15 -28 9 -28 H4Z" fill="${outfitS}" stroke="none"/><rect x="-22" y="-72" width="8" height="30" rx="4" fill="${outfit}"/><rect x="14" y="-72" width="8" height="30" rx="4" fill="${outfit}"/><circle cx="-18" cy="-40" r="3.4" fill="${skin}"/><circle cx="18" cy="-40" r="3.4" fill="${skin}"/>`;
+  }
+  return `<g class="${work ? "worker" : ""}"><g transform="translate(${x} ${y}) scale(${s})" stroke="#2a2018" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${shadow}${body}${head}${eyes}${extra}</g></g>`;
+}
+function people(): string {
+  return [
+    person(252, 610, 0.9, { skin: "#d8a07a", skinS: "#b9835f", hair: "#2a2018", outfit: "#2a7d72", outfitS: "#1f6258", pose: "sit" }),
+    person(556, 566, 1.0, { skin: "#a8714a", skinS: "#8a5a39", hair: "#241a12", outfit: "#c8623c", outfitS: "#9c4a2b", pose: "shoot", work: true }),
+    person(733, 528, 0.86, { skin: "#e3b48c", skinS: "#c89970", hair: "#5a3322", outfit: "#6b5bd2", outfitS: "#5447a8", pose: "sit", work: true }),
+    person(1075, 540, 0.92, { skin: "#7e5236", skinS: "#643f28", hair: "#160f0a", outfit: "#e3a008", outfitS: "#b67f06", pose: "sit" }),
+  ].join("");
+}
+
 function geo(m: string, p: Pal) {
   return `
   <rect width="1280" height="560" fill="${p.wall}"/>
@@ -89,6 +116,7 @@ function geo(m: string, p: Pal) {
     <rect x="250" y="630" width="12" height="14" fill="#2a2018"/><rect x="232" y="644" width="48" height="6" rx="3" fill="#2a2018"/>
     <g stroke="#2a2018" stroke-width="4" fill="none"><path d="M352 600 l0 -36 l-20 -16"/></g><rect x="316" y="540" width="26" height="14" rx="6" fill="#e8643c" stroke="#2a2018" stroke-width="3"/><rect x="158" y="582" width="16" height="18" rx="3" fill="#2a9d8f" stroke="#2a2018" stroke-width="2"/>
   </g>
+  ${people()}
   <rect width="1280" height="720" fill="${p.amb}" opacity="${p.ambO}"/><rect width="1280" height="720" fill="url(#vig_${m})"/>
   <rect width="1280" height="720" filter="url(#grain_${m})" opacity="0.09"/>`;
 }
